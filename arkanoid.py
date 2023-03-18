@@ -1,5 +1,6 @@
 """An OpenAI Gym interface to the NES game Arkanoid"""
 from nes_py import NESEnv
+import enum
 
 
 class Arkanoid(NESEnv):
@@ -7,7 +8,7 @@ class Arkanoid(NESEnv):
 
     def __init__(self):
         """Initialize a new Arkanoid environment."""
-        super(Arkanoid, self).__init__('./Arkanoid (USA).nes')
+        super(Arkanoid, self).__init__("./Arkanoid (USA).nes")
         # setup any variables to use in the below callbacks here
 
     def _will_reset(self):
@@ -46,7 +47,28 @@ class Arkanoid(NESEnv):
 
     def _get_info(self):
         """Return the info after a step occurs."""
-        return {}
+        score = 0
+        remaining_lives = 0
+        level = 1
+        arkanoid_x = 0
+        powerballs = 1
+        sticked_powerball = False
+        large_arkanoid = False
+        laser_arkanoid = False
+        open_portal = False
+        # slowed = False
+
+        return {
+            "score": score,
+            "remaining_lives": remaining_lives,
+            "level": level,
+            "arkanoid_x": arkanoid_x,
+            "powerballs": powerballs,
+            "sticked_powerball": sticked_powerball,
+            "large_arkanoid": large_arkanoid,
+            "laser_arkanoid": laser_arkanoid,
+            "open_portal": open_portal,
+        }
 
 
 # explicitly define the outward facing API for the module
