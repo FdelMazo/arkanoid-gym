@@ -15,8 +15,8 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
     stdscr = curses.initscr()
     curses.noecho()
     curses.cbreak()
+    curses.curs_set(0)
     stdscr.keypad(True)
-    stdscr.clear()
 
     # Read all the ascii art logos instead of opening the file on each frame
     asciiarts = {}
@@ -35,15 +35,16 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
     episodes_finished = 0
     action = 0
 
-    for i in tqdm(range(frames)):
-        # Hard limit on the terminal size
-        if (stdscr.getmaxyx()[0] < 15):
-            curses.resize_term(15, stdscr.getmaxyx()[1])
-        if (stdscr.getmaxyx()[1] < 40):
-            curses.resize_term(stdscr.getmaxyx()[0], 40)
-
+    for i in tqdm(range(frames), position=1, ncols=68):
         # Clear the terminal screen
         stdscr.erase()
+
+        # Hard limit on the terminal size
+        if (stdscr.getmaxyx()[0] < 16 or stdscr.getmaxyx()[1] < 70):
+            stdscr.addstr("Terminal too small!!\n")
+            cursesenabled = False
+        else:
+            cursesenabled = True
 
         # Draw the logo
         asciiart = None
@@ -51,12 +52,10 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
             if stdscr.getmaxyx()[1] >= int(width):
                 asciiart = asciiarts[width]
 
-        if (asciiart):
+        if (cursesenabled and asciiart):
             for i, line in enumerate(asciiart):
                 stdscr.addstr(i, 0, line)
             stdscr.addstr("\n\n")
-        else:
-            stdscr.addstr(0, 0, "Arkanoid\n\n")
 
         if episodes_finished == episodes:
             break
@@ -82,16 +81,15 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
 
         # Print valuable info
         display = {}
+        display["action"] = actions[action][0]
         display["score"] = info["score"]
         display["level"] = info["level"]
         display["remaining_lives"] = info["remaining_lives"]
         if (info["capsule"]["type"] != "None"):
             display["capsule"] = info["capsule"]["type"]
 
-        if ((stdscr.getmaxyx()[0] - stdscr.getyx()[0]) > len(display)):
-            stdscr.addstr(f"{pprint.pformat(display, sort_dicts=False)}\n")
-        else:
-            stdscr.addstr(f"{display}\n\n")
+        if (cursesenabled):
+            stdscr.addstr(f"{pprint.pformat(display, sort_dicts=False, width=70)}\n")
 
         if render:
             ark.render()
