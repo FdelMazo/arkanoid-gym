@@ -41,7 +41,7 @@ for i in tqdm(range(10_000)):
     else:
         action = ark.action_space.sample(mask=np.array([1, 0, 0, 1], dtype=np.int8))
 
-    pprint(info)
+    # pprint(info)
     ark.render()
     time.sleep(0.001)
 ark.close()
