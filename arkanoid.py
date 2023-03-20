@@ -12,7 +12,6 @@ class Arkanoid(NESEnv):
         """Initialize a new Arkanoid environment."""
         super(Arkanoid, self).__init__("./Arkanoid (USA).nes")
         self.reset()
-        self._skip_start_screen()
         self._backup()
 
     def _skip_start_screen(self):
@@ -23,7 +22,6 @@ class Arkanoid(NESEnv):
 
         while self.delay_automatic_release != 120:
             self._frame_advance(0)
-        # breakpoint()
 
     # setup any variables to use in the below callbacks here
 
@@ -52,10 +50,7 @@ class Arkanoid(NESEnv):
 
     def _did_reset(self):
         """Handle any RAM hacking after a reset occurs."""
-        # use this method to access the RAM of the emulator
-        # and perform setup for each episode.
-        # the method returns None
-        pass
+        self._skip_start_screen()
 
     @property
     def bricks_remaining(self):
@@ -186,7 +181,8 @@ class Arkanoid(NESEnv):
 
     def _get_reward(self):
         """Return the reward after a step occurs."""
-        return 0
+        # TODO: change this
+        return self.score + 10 * self.remaining_lives + 100 * self.level
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
