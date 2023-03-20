@@ -1,6 +1,7 @@
 """An OpenAI Gym interface to the NES game Arkanoid"""
-from nes_py import NESEnv
 import enum
+
+from nes_py import NESEnv
 from nes_py.wrappers import JoypadSpace
 
 
@@ -56,6 +57,10 @@ class Arkanoid(NESEnv):
         # the method returns None
         pass
 
+    @property
+    def is_dead(self):
+        return self.ram[0x012A] == 0
+
     def _did_step(self, done):
         """
         Handle any RAM hacking after a step occurs.
@@ -67,22 +72,28 @@ class Arkanoid(NESEnv):
             None
 
         """
-        pass
+        if self.is_dead:
+            while self.is_dead:
+                self._frame_advance(0)
 
     def _get_reward(self):
         """Return the reward after a step occurs."""
         return 0
 
+    @property
+    def remaining_lives(self):
+        return self.ram[0x001D]
+
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
-        return False
+        return self.remaining_lives == 0 and self.is_dead
 
     def _get_info(self):
         """Return the info after a step occurs."""
         # source: http://www.romdetectives.com/Wiki/index.php?title=Arkanoid_(NES)_-_RAM
         return {
             "score": self._read_mem_range(0x0370, 6),
-            "remaining_lives": self.ram[0x001D],
+            "remaining_lives": self.remaining_lives,
             "level": self.ram[0x0023],
             "vaus_very_left_x": self.ram[0x011A],
             "vaus_left_x": self.ram[0x011B],
@@ -95,41 +106,11 @@ class Arkanoid(NESEnv):
             "ball_speed": self.ram[0x0100],
             "hit_counter": self.ram[0x0102],
             "catch": self.ram[0x0128],
-            "vaus_status": {0: "dead", 1: "normal", 2: "extended", 3: "laser"}[
+            "vaus_status": {0: "dead", 1: "normal", 2: "extended", 4: "laser"}[
                 self.ram[0x012A]
             ],
-            "bricks": {
-                f"row_{i}": [self.ram[pos] for pos in range(s, e, 1)]
-                for i, (s, e) in enumerate(
-                    [
-                        (0x03A0, 0x03AA),
-                        (0x03AB, 0x03B6),
-                        (0x03B7, 0x03C0),
-                        (0x03C1, 0x03CB),
-                        (0x03CC, 0x03D6),
-                        (0x03D7, 0x03E1),
-                        (0x03E2, 0x03EC),
-                        (0x03ED, 0x03F7),
-                        (0x03F8, 0x0403),
-                        (0x0404, 0x040D),
-                        (0x040E, 0x0418),
-                        (0x0419, 0x0423),
-                        (0x0424, 0x042E),
-                        (0x042F, 0x0439),
-                        (0x043A, 0x0444),
-                        (0x0445, 0x044F),
-                        (0x0450, 0x045A),
-                        (0x045B, 0x0465),
-                        (0x0466, 0x0470),
-                        (0x0471, 0x047B),
-                        (0x047C, 0x0486),
-                        (0x0487, 0x0491),
-                        (0x0492, 0x049C),
-                        (0x049D, 0x04A7),
-                    ],
-                    start=1,
-                )
-            },
+            "ball_grid_impact": self.ram[0x012E],  # ?
+            "ball_grid_impact": self.ram[0x012F],  # ?
         }
 
 
