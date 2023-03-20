@@ -1,4 +1,24 @@
-"""An OpenAI Gym interface to the NES game Arkanoid"""
+"""An OpenAI Gym interface to the NES game Arkanoid.
+
+Vaus has the following structure:
+
+| |        | |    | |         | |
+0 1        2 3    4 5         6 7
+
+0: position 0, the leftmost position on screen
+1: at x=16, the right position for the left side wall
+2: vaus_very_left_x
+3: vaus_left_x = vaus_middle_left_x
+4: vaus_right_x = vaus_middle_right_x
+5: vaus_very_right_x
+6: at x=184, the left position for the right side wall
+7: position 200, the rightmost position on screen
+
+Walls are 16 pixels wide.
+
+When not extended, d(2,3) = 8, d(3,4) = 8, d(4,5) = 8
+
+"""
 import enum
 
 from nes_py import NESEnv
