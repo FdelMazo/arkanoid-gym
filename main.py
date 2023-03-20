@@ -1,6 +1,7 @@
 import time
 
 from nes_py.wrappers import JoypadSpace
+from tqdm import tqdm
 
 from arkanoid import Arkanoid
 
@@ -15,8 +16,9 @@ import numpy as np
 done = True
 action = 0
 shot_laser = 1
-for i in range(50_000):
+for i in tqdm(range(10_000)):
     if done:
+        print("Episode over!")
         _ = ark.reset()
         done = False
 
@@ -26,14 +28,14 @@ for i in range(50_000):
 
     if shot_laser % 2 == 0 and info["vaus_status"] == "laser":
         action = 3
-    elif info["ball_grid_y"] * (168 / 11) + 16 < info["vaus_left_x"]:
+    elif info["ball_grid_y"] * (168 / 11) + 16 < info["vaus_pos"]["vaus_left_x"]:
         action = 1
     elif (
         info["ball_grid_y"] * (168 / 11)
         + 16
-        + info["vaus_very_right_x"]
-        - info["vaus_very_left_x"]
-        > info["vaus_right_x"]
+        + info["vaus_pos"]["vaus_very_right_x"]
+        - info["vaus_pos"]["vaus_very_left_x"]
+        > info["vaus_pos"]["vaus_right_x"]
     ):
         action = 2
     else:
