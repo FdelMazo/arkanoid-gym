@@ -18,7 +18,7 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
     action = 0
 
     try:
-        for i in tqdm(range(frames), position=1, ncols=68):
+        for i in tqdm(range(frames), position=1, ncols=60):
             terminal.startframe()
             if episodes_finished == episodes:
                 break

@@ -33,7 +33,7 @@ class Terminal():
         self.screen.erase()
 
         # Check if the terminal is too small
-        if (self.screen.getmaxyx()[0] < 16 or self.screen.getmaxyx()[1] < 70):
+        if (self.screen.getmaxyx()[0] < 16 or self.screen.getmaxyx()[1] < 62):
             self.screen.addstr("Terminal too small!!\n")
             self.toosmall = True
         else:
@@ -48,7 +48,7 @@ class Terminal():
         if (not self.toosmall and asciiart):
             for i, line in enumerate(asciiart):
                 self.write(line, i, 0)
-            self.write("\n\n")
+            self.write("\n")
 
     def endframe(self):
         self.screen.refresh()
@@ -64,4 +64,4 @@ class Terminal():
     def writedict(self, dict):
         if (self.toosmall):
             return
-        self.write(f"{pprint.pformat(dict, sort_dicts=False, width=70)}\n")
+        self.write(f"{pprint.pformat(dict, sort_dicts=False, width=62)}\n")
