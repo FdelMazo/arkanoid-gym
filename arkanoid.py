@@ -184,6 +184,14 @@ class Arkanoid(NESEnv):
             for i in range(1, 25)
         }
 
+    @property
+    def ball_x(self):
+        return self.ram[0x0038]
+
+    @property
+    def ball_y(self):
+        return self.ram[0x0039]
+
     def _did_step(self, done):
         """
         Handle any RAM hacking after a step occurs.
@@ -218,6 +226,8 @@ class Arkanoid(NESEnv):
             "vaus_pos": self.vaus_pos,
             "ball_grid_x": self.ram[0x010C],
             "ball_grid_y": self.ram[0x010D],
+            "ball_x": self.ball_x,  # unconfirmed
+            "ball_y": self.ball_y,  # unconfirmed
             "ball_speed": self.ball_speed,
             "hit_counter": self.hit_counter,
             "catch": self.ram[0x0128],
