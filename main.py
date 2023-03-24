@@ -2,11 +2,19 @@ import time
 import numpy as np
 import typer
 from nes_py.wrappers import JoypadSpace
+from nes_py.app.play_human import play_human
 from tqdm import tqdm
 from arkanoid import Arkanoid
 from terminal import Terminal
+import keyboard
+import sys
 
-def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 1000):
+def pause_game():
+    print("Game paused")
+    keyboard.wait('p')
+    print("Game resumed")
+
+def main(mode, render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 1000):
     actions = [["NOOP"], ["left"], ["right"], ["A"]]
 
     terminal = Terminal()
@@ -16,52 +24,59 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
     shot_laser = 1
     episodes_finished = 0
     action = 0
+    if mode == "human":
+        play_human(ark)
+    else:
+        try:
+            for i in tqdm(range(frames), position=1, ncols=60):
+                keyboard.on_press('p', pause_game)
+                terminal.startframe()
+                if episodes_finished == episodes:
+                    break
+                state, reward, done, info = ark.step(action)
 
-    try:
-        for i in tqdm(range(frames), position=1, ncols=60):
-            terminal.startframe()
-            if episodes_finished == episodes:
-                break
+                if done:
+                    _ = ark.reset()
+                    done = False
+                    episodes_finished += 1
+                    continue
 
-            state, reward, done, info = ark.step(action)
+                if info["vaus_status"] == "laser":
+                    shot_laser += 1
+                if shot_laser % 2 == 0 and info["vaus_status"] == "laser":
+                    action = 3
+                elif info["ball_x"] < info["vaus_pos"]["vaus_left_x"]:
+                    action = 1
+                elif info["ball_x"] > info["vaus_pos"]["vaus_right_x"]:
+                    action = 2
+                else:
+                    action = ark.action_space.sample(mask=np.array([1, 0, 0, 1], dtype=np.int8))
 
-            if done:
-                _ = ark.reset()
-                done = False
-                episodes_finished += 1
-                continue
+                # Print valuable info
+                display = {}
+                display["action"] = actions[action][0]
+                display["score"] = info["score"]
+                display["level"] = info["level"]
+                display["remaining_lives"] = info["remaining_lives"]
+                if (info["capsule"]["type"] != "None"):
+                    display["capsule"] = info["capsule"]["type"]
 
-            if info["vaus_status"] == "laser":
-                shot_laser += 1
-            if shot_laser % 2 == 0 and info["vaus_status"] == "laser":
-                action = 3
-            elif info["ball_x"] < info["vaus_pos"]["vaus_left_x"]:
-                action = 1
-            elif info["ball_x"] > info["vaus_pos"]["vaus_right_x"]:
-                action = 2
-            else:
-                action = ark.action_space.sample(mask=np.array([1, 0, 0, 1], dtype=np.int8))
+                terminal.writedict(display)
+                if render:
+                    ark.render()
 
-            # Print valuable info
-            display = {}
-            display["action"] = actions[action][0]
-            display["score"] = info["score"]
-            display["level"] = info["level"]
-            display["remaining_lives"] = info["remaining_lives"]
-            if (info["capsule"]["type"] != "None"):
-                display["capsule"] = info["capsule"]["type"]
+                time.sleep(1 / fps)
+                terminal.endframe()
 
-            terminal.writedict(display)
-            if render:
-                ark.render()
-
-            time.sleep(1 / fps)
-            terminal.endframe()
-
-    except KeyboardInterrupt:
-        ark.close()
-    finally:
-        terminal.close()
+        except KeyboardInterrupt:
+            ark.close()
+        finally:
+            terminal.close()
 
 if __name__ == "__main__":
-    typer.run(main)
+    mode = 'ia'
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg in ['human', 'ia']:
+            mode = arg
+    typer.run(main(mode))
