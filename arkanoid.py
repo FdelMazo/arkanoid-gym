@@ -1,6 +1,11 @@
 """An OpenAI Gym interface to the NES game Arkanoid.
 
-Vaus has the following structure:
+Arkanoid is a block breaker video game where the player
+controls "vaus", a space vessel, to bounce a ball and break
+blocks.
+
+The screen has the following structure, with vaus in between
+positions 2 and 5:
 
 | |        | |    | |         | |
 0 1        2 3    4 5         6 7
@@ -17,13 +22,22 @@ Vaus has the following structure:
 Walls are 16 pixels wide.
 
 When not extended, d(2,3) = 8, d(3,4) = 8, d(4,5) = 8
-
 """
-import enum
 
 from nes_py import NESEnv
-from nes_py.wrappers import JoypadSpace
-
+from nes_py._image_viewer import ImageViewer
+import sys
+NES_BUTTONS = {
+    'right':  0b10000000,
+    'left':   0b01000000,
+    'down':   0b00100000,
+    'up':     0b00010000,
+    'start':  0b00001000,
+    'select': 0b00000100,
+    'B':      0b00000010,
+    'A':      0b00000001,
+    'NOOP':   0b00000000,
+}
 
 class Arkanoid(NESEnv):
     """An OpenAI Gym interface to the NES game Arkanoid"""
@@ -36,12 +50,12 @@ class Arkanoid(NESEnv):
 
     def _skip_start_screen(self):
         while self.bricks_remaining != 66:
-            self._frame_advance(8)
+            self._frame_advance(NES_BUTTONS['start'])
             for _ in range(30):
-                self._frame_advance(0)
+                self._frame_advance(NES_BUTTONS['NOOP'])
 
         while self.delay_automatic_release != 120:
-            self._frame_advance(0)
+            self._frame_advance(NES_BUTTONS['NOOP'])
 
     # setup any variables to use in the below callbacks here
 
@@ -205,7 +219,7 @@ class Arkanoid(NESEnv):
         """
         if self.is_dead:
             while self.is_dead:
-                self._frame_advance(0)
+                self._frame_advance(NES_BUTTONS["NOOP"])
 
     def _get_reward(self):
         """Return the reward after a step occurs."""
