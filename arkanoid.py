@@ -42,11 +42,19 @@ NES_BUTTONS = {
 class Arkanoid(NESEnv):
     """An OpenAI Gym interface to the NES game Arkanoid"""
 
-    def __init__(self):
+    def __init__(self, render):
         """Initialize a new Arkanoid environment."""
-        super(Arkanoid, self).__init__("./Arkanoid (USA).nes")
+        rom = "Arkanoid (USA)"
+        super(Arkanoid, self).__init__(f"./{rom}.nes")
         self.reset()
         self._backup()
+        if render:
+            self.viewer = ImageViewer(
+                caption=rom,
+                height=256,
+                width=256,
+                monitor_keyboard=True
+            )
 
     def _skip_start_screen(self):
         while self.bricks_remaining != 66:
