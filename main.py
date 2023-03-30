@@ -6,30 +6,47 @@ from nes_py.app.play_human import play_human
 from tqdm import tqdm
 from arkanoid import Arkanoid
 from terminal import Terminal
-import keyboard
-import sys
+from pynput import keyboard
+import enum
+import threading
 
-def pause_game():
-    print("Game paused")
-    keyboard.wait('p')
-    print("Game resumed")
+class Mode(str, enum.Enum):
+    ia = "ia"
+    human = "human"
 
-def main(mode, render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 1000):
+def main(mode: Mode = Mode.ia,
+         render: bool = True,
+         fps: int = 1000,
+         episodes: int = 3,
+         frames: int = 1000):
     actions = [["NOOP"], ["left"], ["right"], ["A"]]
 
     terminal = Terminal()
-    ark = Arkanoid()
-    ark = JoypadSpace(ark, actions)
+    ark = JoypadSpace(Arkanoid(), actions)
+
+    # Set a flag to pause/unpause the game
+    paused = threading.Event()
+    def on_press(key):
+        try:
+            if (key.char == "p"):
+                paused.clear() if paused.is_set() else paused.set()
+        except AttributeError:
+            pass
+
+    keyboard.Listener(on_press=on_press).start()
 
     shot_laser = 1
     episodes_finished = 0
     action = 0
+
     if mode == "human":
         play_human(ark)
     else:
         try:
             for i in tqdm(range(frames), position=1, ncols=60):
-                keyboard.on_press('p', pause_game)
+                while paused.is_set():
+                    continue
+
                 terminal.startframe()
                 if episodes_finished == episodes:
                     break
@@ -74,9 +91,4 @@ def main(mode, render: bool = True, fps: int = 1000, episodes: int = 3, frames: 
             terminal.close()
 
 if __name__ == "__main__":
-    mode = 'ia'
-    if len(sys.argv) > 1:
-        arg = sys.argv[1]
-        if arg in ['human', 'ia']:
-            mode = arg
-    typer.run(main(mode))
+    typer.run(main)
