@@ -24,20 +24,23 @@ Walls are 16 pixels wide.
 When not extended, d(2,3) = 8, d(3,4) = 8, d(4,5) = 8
 """
 
+import sys
+
 from nes_py import NESEnv
 from nes_py._image_viewer import ImageViewer
-import sys
+
 NES_BUTTONS = {
-    'right':  0b10000000,
-    'left':   0b01000000,
-    'down':   0b00100000,
-    'up':     0b00010000,
-    'start':  0b00001000,
-    'select': 0b00000100,
-    'B':      0b00000010,
-    'A':      0b00000001,
-    'NOOP':   0b00000000,
+    "right": 0b10000000,
+    "left": 0b01000000,
+    "down": 0b00100000,
+    "up": 0b00010000,
+    "start": 0b00001000,
+    "select": 0b00000100,
+    "B": 0b00000010,
+    "A": 0b00000001,
+    "NOOP": 0b00000000,
 }
+
 
 class Arkanoid(NESEnv):
     """An OpenAI Gym interface to the NES game Arkanoid"""
@@ -50,20 +53,17 @@ class Arkanoid(NESEnv):
         self._backup()
         if render:
             self.viewer = ImageViewer(
-                caption=rom,
-                height=256,
-                width=256,
-                monitor_keyboard=True
+                caption=rom, height=256, width=256, monitor_keyboard=True
             )
 
     def _skip_start_screen(self):
         while self.bricks_remaining != 66:
-            self._frame_advance(NES_BUTTONS['start'])
+            self._frame_advance(NES_BUTTONS["start"])
             for _ in range(30):
-                self._frame_advance(NES_BUTTONS['NOOP'])
+                self._frame_advance(NES_BUTTONS["NOOP"])
 
         while self.delay_automatic_release != 120:
-            self._frame_advance(NES_BUTTONS['NOOP'])
+            self._frame_advance(NES_BUTTONS["NOOP"])
 
     # setup any variables to use in the below callbacks here
 
@@ -260,6 +260,9 @@ class Arkanoid(NESEnv):
             "delay_automatic_release": self.delay_automatic_release,
             "bricks": {"remaining": self.bricks_remaining, "rows": self.bricks_rows},
         }
+
+    def reset(self, seed=None, options=None, return_info=True):
+        return super().reset(seed, options, return_info), self._get_info()
 
 
 # explicitly define the outward facing API for the module
