@@ -6,7 +6,7 @@ class HeuristicAgent:
         self.env = env
         self.shot_laser = 1
 
-    def get_action(self, state, info):
+    def get_action(self, _screen, info):
         if info["vaus_status"] == "laser":
             self.shot_laser += 1
         if self.shot_laser % 2 == 0 and info["vaus_status"] == "laser":
@@ -21,5 +21,5 @@ class HeuristicAgent:
             )
         return action
 
-    def update(self, obs, action, reward, terminated, next_obs):
+    def update(self, _screen, _info, _action, _reward, _done, _next_screen, _next_info):
         pass

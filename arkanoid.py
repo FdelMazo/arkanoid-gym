@@ -24,7 +24,6 @@ Walls are 16 pixels wide.
 When not extended, d(2,3) = 8, d(3,4) = 8, d(4,5) = 8
 """
 
-import sys
 
 from nes_py import NESEnv
 from nes_py._image_viewer import ImageViewer
@@ -48,7 +47,7 @@ class Arkanoid(NESEnv):
     def __init__(self, render):
         """Initialize a new Arkanoid environment."""
         rom = "Arkanoid (USA)"
-        super(Arkanoid, self).__init__(f"./{rom}.nes")
+        super().__init__(f"./{rom}.nes")
         self.reset()
         self._backup()
         if render:
@@ -103,14 +102,14 @@ class Arkanoid(NESEnv):
         status = self.ram[0x012A]
         if status == 0:
             return "dead"
-        elif status == 1:
+        if status == 1:
             return "normal"
-        elif status == 2:
+        if status == 2:
             return "extended"
-        elif status == 4:
+        if status == 4:
             return "laser"
-        else:
-            raise ValueError(f"Bad status {status}")
+
+        raise ValueError(f"Bad status {status}")
 
     @property
     def is_dead(self):
@@ -164,22 +163,21 @@ class Arkanoid(NESEnv):
         value = self.ram[0x008C]
         if value == 0:
             return None
-        elif value == 1:
+        if value == 1:
             return "slow"
-        elif value == 2:
+        if value == 2:
             return "catch"
-        elif value == 3:
+        if value == 3:
             return "extend"
-        elif value == 4:
+        if value == 4:
             return "disrupt"
-        elif value == 5:
+        if value == 5:
             return "laser"
-        elif value == 6:
+        if value == 6:
             return "break"
-        elif value == 7:
+        if value == 7:
             return "player_extend"
-        else:
-            raise ValueError(f"Bad capsule type {value}")
+        raise ValueError(f"Bad capsule type {value}")
 
     @property
     def capsule(self):

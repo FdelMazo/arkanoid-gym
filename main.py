@@ -2,7 +2,6 @@ import enum
 import threading
 import time
 
-import numpy as np
 import pyglet
 import typer
 from nes_py.app.play_human import play_human
@@ -54,7 +53,7 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
     episodes_finished = 0
 
     try:
-        state, info = env.reset()
+        screen, info = env.reset()
 
         for frame in tqdm(range(frames), position=1, ncols=60):
             while paused.is_set():
@@ -67,17 +66,18 @@ def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 
             if human.is_set():
                 action = key_to_action(env.env.viewer.pressed_keys)
             else:
-                action = agent.get_action(state, info)
+                action = agent.get_action(screen, info)
 
-            next_state, reward, done, info = env.step(action)
+            next_screen, reward, done, next_info = env.step(action)
 
             if not human.is_set():
-                agent.update(state, action, reward, done, next_state)
+                agent.update(screen, info, action, reward, done, next_screen, next_info)
 
-            state = next_state
+            screen = next_screen
+            info = next_info
 
             if done:
-                state, info = env.reset()
+                screen, info = env.reset()
                 episodes_finished += 1
                 continue
 
