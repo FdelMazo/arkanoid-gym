@@ -1,12 +1,14 @@
 import numpy as np
 
+from agent import ArkAgent
 
-class HeuristicAgent:
+
+class HeuristicAgent(ArkAgent):
     def __init__(self, env):
         self.env = env
         self.shot_laser = 1
 
-    def get_action(self, _screen, info):
+    def get_action(self, _screen, info) -> int:
         if info["vaus_status"] == "laser":
             self.shot_laser += 1
         if self.shot_laser % 2 == 0 and info["vaus_status"] == "laser":

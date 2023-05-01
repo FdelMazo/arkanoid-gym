@@ -54,6 +54,7 @@ class Arkanoid(NESEnv):
             self.viewer = ImageViewer(
                 caption=rom, height=256, width=256, monitor_keyboard=True
             )
+        self.episode = 0
 
     def _skip_start_screen(self):
         while self.bricks_remaining != 66:
@@ -97,35 +98,29 @@ class Arkanoid(NESEnv):
     def bricks_remaining(self):
         return self.ram[0x000F]
 
+    def vaus_status_string(self, status):
+        return {0: "dead", 1: "normal", 2: "extended", 3: "laser"}.get(status)
+
     @property
     def vaus_status(self):
         status = self.ram[0x012A]
-        if status == 0:
-            return "dead"
-        if status == 1:
-            return "normal"
-        if status == 2:
-            return "extended"
-        if status == 4:
-            return "laser"
-
-        raise ValueError(f"Bad status {status}")
+        return status
 
     @property
     def is_dead(self):
-        return self.vaus_status == "dead"
+        return self.vaus_status_string(self.vaus_status) == "dead"
 
     @property
     def vaus_normal(self):
-        return self.vaus_status == "normal"
+        return self.vaus_status_string(self.vaus_status) == "normal"
 
     @property
     def vaus_extended(self):
-        return self.vaus_status == "extended"
+        return self.vaus_status_string(self.vaus_status) == "extended"
 
     @property
     def vaus_laser(self):
-        return self.vaus_status == "laser"
+        return self.vaus_status_string(self.vaus_status) == "laser"
 
     @property
     def remaining_lives(self):
@@ -158,26 +153,22 @@ class Arkanoid(NESEnv):
     def hit_counter(self):
         return self.ram[0x0102]
 
+    def capsule_type_string(self, value: int) -> str:
+        return {
+            0: None,
+            1: "slow",
+            2: "catch",
+            3: "extend",
+            4: "disrupt",
+            5: "laser",
+            6: "break",
+            7: "player_extend",
+        }.get(value)
+
     @property
     def capsule_type(self):
         value = self.ram[0x008C]
-        if value == 0:
-            return None
-        if value == 1:
-            return "slow"
-        if value == 2:
-            return "catch"
-        if value == 3:
-            return "extend"
-        if value == 4:
-            return "disrupt"
-        if value == 5:
-            return "laser"
-        if value == 6:
-            return "break"
-        if value == 7:
-            return "player_extend"
-        raise ValueError(f"Bad capsule type {value}")
+        return value
 
     @property
     def capsule(self):
@@ -235,6 +226,11 @@ class Arkanoid(NESEnv):
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
         return self.remaining_lives == 0 and self.is_dead
+
+    @property
+    def info(self):
+        # TODO: fix this!
+        return self._get_info()
 
     def _get_info(self):
         """Return the info after a step occurs."""
