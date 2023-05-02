@@ -24,6 +24,7 @@ Walls are 16 pixels wide.
 When not extended, d(2,3) = 8, d(3,4) = 8, d(4,5) = 8
 """
 
+import numpy as np
 
 from nes_py import NESEnv
 from nes_py._image_viewer import ImageViewer
@@ -48,13 +49,13 @@ class Arkanoid(NESEnv):
         """Initialize a new Arkanoid environment."""
         rom = "Arkanoid (USA)"
         super().__init__(f"./{rom}.nes")
+        self.episode = 0
         self.reset()
         self._backup()
         if render:
             self.viewer = ImageViewer(
                 caption=rom, height=256, width=256, monitor_keyboard=True
             )
-        self.episode = 0
 
     def _skip_start_screen(self):
         while self.bricks_remaining != 66:
@@ -93,6 +94,7 @@ class Arkanoid(NESEnv):
     def _did_reset(self):
         """Handle any RAM hacking after a reset occurs."""
         self._skip_start_screen()
+        self.episode += 1
 
     @property
     def bricks_remaining(self):
@@ -190,10 +192,12 @@ class Arkanoid(NESEnv):
 
     @property
     def bricks_rows(self):
-        return {
-            f"row_{i}": [self.ram[0x03A0 + 11 * (i - 1) + j] for j in range(0, 11)]
-            for i in range(1, 25)
-        }
+        return np.array(
+            [
+                [self.ram[0x03A0 + 11 * (i - 1) + j] for j in range(0, 11)]
+                for i in range(1, 25)
+            ]
+        )
 
     @property
     def ball_x(self):
