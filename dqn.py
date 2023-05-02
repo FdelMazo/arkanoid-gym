@@ -147,11 +147,11 @@ class DQNAgent(ArkAgent):
             info_to_array(env.info).shape[0], env.action_space.n, env
         ).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.lr = 1e-4
-        self.gamma = 0.99
+        self.lr = 1e-3
+        self.gamma = 0.90
         self.eps_start = 0.9
         self.eps_end = 0.05
-        self.eps_decay = 1000
+        self.eps_decay = 50
         self.tau = 0.005
         self.optimizer = torch.optim.AdamW(
             self.policy_net.parameters(), lr=self.lr, amsgrad=True
