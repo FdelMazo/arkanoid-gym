@@ -26,8 +26,6 @@ class StateTransition:
     next_info: Dict
 
 
-
-
 # @profile
 def info_to_array(info):
     return np.hstack(
@@ -188,7 +186,7 @@ class DQNAgent(ArkAgent):
                     )
                     return expected_rewards.max(1)[1].item()
             return self.env.action_space.sample(
-                mask=np.array([1, 0, 0, 1], dtype=np.int8)
+                mask=np.array([1, 1, 1, 1], dtype=np.int8)
             )
             """return torch.tensor(
                 [
@@ -302,16 +300,16 @@ class DQNAgent(ArkAgent):
             ] * self.tau + target_net_state_dict[key] * (1 - self.tau)
         self.target_net.load_state_dict(target_net_state_dict)
 
-    def plot_history(self):
+    def plot_history(self, last: int = 10):
         fig, (ax_loss, ax_rew) = plt.subplots(nrows=1, ncols=2, figsize=(18, 6))
 
         start = 0
-        for ep, series in self.loss.items():
+        for ep, series in deque(self.loss.items(), last):
             ax_loss.plot(np.arange(start, start + len(series)), series, label=f"{ep}")
             start += len(series)
         ax_loss.set_title("Loss")
 
-        for ep, series in self.rewards.items():
+        for ep, series in deque(self.rewards.items(), last):
             ax_rew.plot(series, label=f"{ep}")
         ax_rew.set_title("Rewards")
 
