@@ -225,7 +225,7 @@ class Arkanoid(NESEnv):
     def _get_reward(self):
         """Return the reward after a step occurs."""
         # TODO: change this
-        return self.score / 100 + self.remaining_lives + self.level / 10
+        return self.score  # / 100 + self.remaining_lives + self.level / 10
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
