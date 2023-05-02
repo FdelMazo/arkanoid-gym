@@ -1,6 +1,7 @@
 import enum
 import threading
 import time
+from typing import Literal
 
 import pyglet
 import typer
@@ -10,10 +11,18 @@ from pynput import keyboard
 from tqdm import tqdm
 
 from arkanoid import Arkanoid
+from dqn import DQNAgent
 from heuristic import HeuristicAgent
 from terminal import Terminal
 
 ACTIONS = [["NOOP"], ["left"], ["right"], ["A"]]
+
+import enum
+
+
+class Agent(enum.Enum):
+    heuristic = "heuristic"
+    dqn = "dqn"
 
 
 def key_to_action(keys):
@@ -29,10 +38,19 @@ def key_to_action(keys):
         return 0
 
 
-def main(render: bool = True, fps: int = 1000, episodes: int = 3, frames: int = 1000):
+def main(
+    render: bool = True,
+    fps: int = 1000,
+    episodes: int = 3,
+    frames: int = 1000,
+    agent: Agent = Agent.heuristic.value,
+):
     terminal = Terminal()
     env = JoypadSpace(Arkanoid(render), ACTIONS)
-    agent = HeuristicAgent(env)
+    if agent == Agent.heuristic:
+        agent = HeuristicAgent(env)
+    elif agent == Agent.dqn:
+        agent = DQNAgent(env)
 
     # Set a flag to pause/unpause the game and one to control it
     # This runs in a separate non-blocking thread
