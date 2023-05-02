@@ -3,8 +3,9 @@ import operator as ops
 import random
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -12,7 +13,7 @@ import torch
 
 from agent import ArkAgent
 
-BATCH_SIZE: int = 512
+BATCH_SIZE: int = 64
 
 
 @dataclass
@@ -25,21 +26,16 @@ class StateTransition:
     next_info: Dict
 
 
-from typing import Optional
 
 
+# @profile
 def info_to_array(info):
-    df = pd.json_normalize(info)
-    df = df[sorted(df.columns)]
-    list_columns = [col for col in df.columns if isinstance(df.loc[0, col], list)]
-    df = pd.concat(
-        [
-            df.drop(columns=list_columns),
-            *[df[col].apply(pd.Series).add_prefix(f"{col}.") for col in list_columns],
-        ],
-        axis=1,
+    return np.hstack(
+        (
+            pd.json_normalize(info).drop(columns=["bricks.rows"]).iloc[0].values,
+            np.array(info["bricks"]["rows"]).flatten(),
+        )
     )
-    return df.iloc[0].values
 
 
 class ReplayMemory:
@@ -47,10 +43,12 @@ class ReplayMemory:
         self.memory = deque([], maxlen=capacity)
         self.batch_size = batch_size
 
+    # @profile
     def can_sample(self, batch_size: Optional[int] = None):
         batch_size = batch_size or self.batch_size
         return len(self.memory) > batch_size
 
+    # @profile
     def push(
         self,
         screen: npt.NDArray[np.uint8],
@@ -64,6 +62,7 @@ class ReplayMemory:
             StateTransition(screen, info, action, reward, next_screen, next_info)
         )
 
+    # @profile
     def sample(self, batch_size: Optional[int] = None):
         batch_size = batch_size or self.batch_size
         return random.sample(self.memory, batch_size)
@@ -73,23 +72,55 @@ class ReplayMemory:
 
 
 class DQN(torch.nn.Module):
-    def __init__(self, n_observations: int, n_actions: int, seed: int = 117):
+    def __init__(
+        self,
+        n_observations: int,
+        n_actions: int,
+        env,
+        seed: int = 117,
+        hidden_dim: int = 128,
+    ):
         super().__init__()
         self.seed = torch.manual_seed(seed)
-        self.l1 = torch.nn.Linear(n_observations, 128)  # TODO: unhardcode
-        self.l2 = torch.nn.Linear(128, 128)
-        self.l3 = torch.nn.Linear(128, n_actions)
+        self.l1 = torch.nn.Linear(n_observations, hidden_dim)
+        self.l2 = torch.nn.Linear(hidden_dim, hidden_dim)
+        self.l3 = torch.nn.Linear(hidden_dim, n_actions)
 
+        self.cols, self.flatten_cols = self._process_columns(env)
+
+    def _process_columns(self, env):
+        cs = pd.json_normalize(env.info)
+        cols = []
+        flatten_cols = []
+        for c in cs.columns:
+            splitc = tuple(c.split("."))
+            if isinstance(cs.loc[0, c], np.ndarray):
+                flatten_cols.append(splitc)
+            cols.append(splitc)
+
+        cols = tuple(cols)
+        flatten_cols = set(flatten_cols)
+        return cols, flatten_cols
+
+    # @profile
     def forward(self, x):
         x = torch.nn.functional.relu(self.l1(x))
         x = torch.nn.functional.relu(self.l2(x))
         x = self.l3(x)
         return x
 
-    @classmethod
-    def prepare(cls, info, _screen):
-        retval = info_to_array(info)
-        return retval
+    def prepare(self, info, _screen):
+        values = []
+        for x in self.cols:
+            y = info
+            for k in x:
+                y = y[k]
+            if x in self.flatten_cols:
+                y = y.flatten()
+            else:
+                y = np.array(y)
+            values.append(y)
+        return np.hstack(values)
 
 
 class DQNAgent(ArkAgent):
@@ -111,12 +142,12 @@ class DQNAgent(ArkAgent):
         self.training_eps_done = 0
         self.training_steps_done = 0
         self.episode_durations = []
-        self.policy_net = DQN(info_to_array(env.info).shape[0], env.action_space.n).to(
-            self.device
-        )
-        self.target_net = DQN(info_to_array(env.info).shape[0], env.action_space.n).to(
-            self.device
-        )
+        self.policy_net = DQN(
+            info_to_array(env.info).shape[0], env.action_space.n, env
+        ).to(self.device)
+        self.target_net = DQN(
+            info_to_array(env.info).shape[0], env.action_space.n, env
+        ).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.lr = 1e-4
         self.gamma = 0.99
@@ -128,7 +159,8 @@ class DQNAgent(ArkAgent):
             self.policy_net.parameters(), lr=self.lr, amsgrad=True
         )
         self.batch_size = batch_size
-        self.history = defaultdict(list)
+        self.loss = defaultdict(list)
+        self.rewards = defaultdict(list)
 
     def toggle_train(self):
         self.train = not self.train
@@ -137,6 +169,7 @@ class DQNAgent(ArkAgent):
     def is_training(self):
         return self.train
 
+    ##@profile
     def get_action(self, screen, info):
         if self.is_training:
             sample = random.random()
@@ -183,6 +216,7 @@ class DQNAgent(ArkAgent):
                 .item()
             )
 
+    ##@profile
     def optimize_model(self):
         if not self.memory.can_sample():
             return
@@ -248,12 +282,13 @@ class DQNAgent(ArkAgent):
         torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         self.optimizer.step()
 
-        self.history[self.env.episode].append(loss.item())
+        self.loss[self.env.episode].append(loss.item())
 
+    # @profile
     def update(self, screen, info, action, reward, done, next_screen, next_info):
         # Store the transition in memory
         self.memory.push(screen, info, action, reward, next_screen, next_info)
-
+        self.rewards[self.env.episode].append(reward)
         # One step optimization on the policy network
         self.optimize_model()
 
@@ -266,3 +301,19 @@ class DQNAgent(ArkAgent):
                 key
             ] * self.tau + target_net_state_dict[key] * (1 - self.tau)
         self.target_net.load_state_dict(target_net_state_dict)
+
+    def plot_history(self):
+        fig, (ax_loss, ax_rew) = plt.subplots(nrows=1, ncols=2, figsize=(18, 6))
+
+        start = 0
+        for ep, series in self.loss.items():
+            ax_loss.plot(np.arange(start, start + len(series)), series, label=f"{ep}")
+            start += len(series)
+        ax_loss.set_title("Loss")
+
+        for ep, series in self.rewards.items():
+            ax_rew.plot(series, label=f"{ep}")
+        ax_rew.set_title("Rewards")
+
+        plt.legend()
+        plt.show()
