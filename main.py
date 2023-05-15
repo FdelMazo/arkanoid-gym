@@ -147,6 +147,7 @@ def train(
     batch_size: int = 128,
     checkpoint_dir: pathlib.Path = "checkpoints",
     save_every: Optional[int] = None,
+    resume: bool = False,
 ):
     env = JoypadSpace(Arkanoid(), ACTIONS)
     DQNAgent.train(
@@ -155,6 +156,7 @@ def train(
         batch_size=batch_size,
         episodes=episodes,
         save_every=save_every,
+        resume=resume,
     )
 
 

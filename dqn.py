@@ -334,36 +334,57 @@ class DQNAgent(ArkAgent):
         checkpoint_dir: pathlib.Path,
         batch_size: int = 128,
         episodes: int = 1000,
+        resume: bool = False,
+        eps_start=1.0,
+        eps_end=0.01,
+        eps_decay=0.995,
         save_every: Optional[int] = None,
     ):
-        agent = cls(env, batch_size=batch_size)
-        screen, info = env.reset()
-
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        latest_dir = checkpoint_dir / "latest"
+        latest_dir.mkdir(exist_ok=True)
+
+        if resume:
+            agent = cls.load(env, latest_dir, batch_size=batch_size)
+        else:
+            agent = cls(env, batch_size=batch_size)
+
+        screen, info = env.reset()
 
         c = count()
 
-        for episode in tqdm(range(episodes), desc="Episode: ", position=0):
+        for episode in tqdm(range(1, episodes + 1), desc="Episode: ", position=0):
+            episode_score = 0
+
             for frame in tqdm(c, desc="Frame: ", position=1):
                 action = agent.get_action(screen, info)
-                # print(action)
                 next_screen, reward, done, next_info = env.step(action)
+                episode_score += reward
                 agent.update(screen, info, action, reward, done, next_screen, next_info)
 
                 screen = next_screen
                 info = next_info
 
-                if save_every is not None and frame > 0 and frame % save_every == 0:
+                if save_every is not None and frame % save_every == 0:
                     checkpoint_dir_ = checkpoint_dir / f"{frame}"
                     checkpoint_dir_.mkdir(exist_ok=True)
                     torch.save(
                         agent.policy_net.state_dict(),
                         checkpoint_dir_ / "policy_net.pth",
                     )
+                    torch.save(
+                        agent.policy_net.state_dict(),
+                        latest_dir / "policy_net.pth",
+                    )
 
                 if done:
-                    print(f"Episode {episode}: {reward=}", flush=True)
+                    losses = agent.loss[max(agent.loss.keys())]
+                    print(
+                        f"Episode {episode}: final score={env.score} total rewards={episode_score} mean loss = {np.mean(losses):.4f}",
+                        flush=True,
+                    )
                     screen, info = env.reset()
                     break
 
         torch.save(agent.policy_net.state_dict(), checkpoint_dir / "policy_net.pth")
+        torch.save(agent.policy_net.state_dict(), latest_dir / "policy_net.pth")
