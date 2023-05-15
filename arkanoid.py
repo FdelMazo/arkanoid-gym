@@ -56,6 +56,7 @@ class Arkanoid(NESEnv):
             self.viewer = ImageViewer(
                 caption=rom, height=256, width=256, monitor_keyboard=True
             )
+        self._prev_score = None
 
     def _skip_start_screen(self):
         while self.bricks_remaining != 66:
@@ -222,14 +223,42 @@ class Arkanoid(NESEnv):
             while self.is_dead:
                 self._frame_advance(NES_BUTTONS["NOOP"])
 
+    @property
+    def is_touching(self):
+        return self.ball_y == 23 and (
+            self.vaus_pos["vaus_very_left_x"]
+            <= self.ball_x
+            <= self.vaus_pos["vaus_very_right_x"]
+        )
+
     def _get_reward(self):
         """Return the reward after a step occurs."""
-        # TODO: change this
-        return self.score  # / 100 + self.remaining_lives + self.level / 10
+        if self.is_dead:
+            #   print("Died: -100")
+            return -1000
+
+        if self.is_touching:
+            #    print("Touching: +1")
+            return 50
+
+        if self._prev_score is None:
+            self._prev_score = self.score
+            return self.score
+
+        delta = self.score - self._prev_score
+        self._prev_score = self.score
+
+        # if delta > 0:
+        #    print(f"Delta: {delta}")
+        return delta  # / 100 + self.remaining_lives + self.level / 10
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
         return self.remaining_lives == 0 and self.is_dead
+
+    @property
+    def is_catch(self):
+        return self.ram[0x0128]
 
     @property
     def info(self):
@@ -250,12 +279,13 @@ class Arkanoid(NESEnv):
             "ball_y": self.ball_y,  # unconfirmed
             "ball_speed": self.ball_speed,
             "hit_counter": self.hit_counter,
-            "catch": self.ram[0x0128],
+            "catch": self.is_catch,
             "vaus_status": self.vaus_status,
             "ball_grid_impact": self.ram[0x012E],  # ?
-            "ball_grid_impact": self.ram[0x012F],  # ?
+            "ball_grid_impact_2": self.ram[0x012F],  # ?
             "capsule": self.capsule,
             "delay_automatic_release": self.delay_automatic_release,
+            "is_touching": self.is_touching,
             "bricks": {"remaining": self.bricks_remaining, "rows": self.bricks_rows},
         }
 
