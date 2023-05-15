@@ -2,7 +2,7 @@ import enum
 import threading
 import time
 from typing import Literal
-
+from itertools import count
 import pyglet
 import typer
 from nes_py.app.play_human import play_human
@@ -15,9 +15,14 @@ from dqn import DQNAgent
 from heuristic import HeuristicAgent
 from terminal import Terminal
 
+from typing import Optional
+import pathlib
+
 ACTIONS = [["NOOP"], ["left"], ["right"], ["A"]]
 
 import enum
+
+app = typer.Typer()
 
 
 class Agent(enum.Enum):
@@ -38,19 +43,26 @@ def key_to_action(keys):
         return 0
 
 
-def main(
+@app.command()
+def play(
     render: bool = True,
-    fps: int = 1000,
-    episodes: int = 3,
-    frames: int = 1000,
+    fps: int = 50,
+    episodes: int = 1,
+    frames: Optional[int] = None,
     agent: Agent = Agent.heuristic.value,
+    checkpoint_dir: Optional[pathlib.Path] = None,
 ):
     terminal = Terminal()
     env = JoypadSpace(Arkanoid(render), ACTIONS)
     if agent == Agent.heuristic:
         agent = HeuristicAgent(env)
     elif agent == Agent.dqn:
-        agent = DQNAgent(env)
+        if checkpoint_dir is None:
+            raise ValueError(
+                "When using DQN Agent, you need to specify where to load the checkpoint from"
+            )
+        agent = DQNAgent.load(env, checkpoint_dir)
+        print("Loaded agent from checkpoint")
 
     # Set a flag to pause/unpause the game and one to control it
     # This runs in a separate non-blocking thread
@@ -73,7 +85,7 @@ def main(
     try:
         screen, info = env.reset()
 
-        for frame in tqdm(range(frames), position=1, ncols=60):
+        for frame in tqdm(range(frames) if frames else count(), position=1, ncols=60):
             while paused.is_set():
                 continue
 
@@ -124,5 +136,25 @@ def main(
         terminal.close()
 
 
+import pathlib
+
+
+@app.command()
+def train(
+    episodes: int = 1000,
+    batch_size: int = 128,
+    checkpoint_dir: pathlib.Path = "checkpoints",
+    save_every: Optional[int] = None,
+):
+    env = JoypadSpace(Arkanoid(), ACTIONS)
+    DQNAgent.train(
+        env,
+        checkpoint_dir,
+        batch_size=batch_size,
+        episodes=episodes,
+        save_every=save_every,
+    )
+
+
 if __name__ == "__main__":
-    typer.run(main)
+    app()

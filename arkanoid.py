@@ -45,7 +45,7 @@ NES_BUTTONS = {
 class Arkanoid(NESEnv):
     """An OpenAI Gym interface to the NES game Arkanoid"""
 
-    def __init__(self, render):
+    def __init__(self, render: bool = False):
         """Initialize a new Arkanoid environment."""
         rom = "Arkanoid (USA)"
         super().__init__(f"./{rom}.nes")

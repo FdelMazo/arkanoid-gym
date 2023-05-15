@@ -4,7 +4,9 @@ import random
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Union
-
+from tqdm import tqdm
+from itertools import count
+import pathlib
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
@@ -76,7 +78,7 @@ class DQN(torch.nn.Module):
         n_actions: int,
         env,
         seed: int = 117,
-        hidden_dim: int = 128,
+        hidden_dim: int = 64,
     ):
         super().__init__()
         self.seed = torch.manual_seed(seed)
@@ -147,12 +149,12 @@ class DQNAgent(ArkAgent):
             info_to_array(env.info).shape[0], env.action_space.n, env
         ).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.lr = 1e-3
-        self.gamma = 0.90
+        self.lr = 5e-4
+        self.gamma = 0.99
         self.eps_start = 0.9
         self.eps_end = 0.05
         self.eps_decay = 50
-        self.tau = 0.005
+        self.tau = 1e-3
         self.optimizer = torch.optim.AdamW(
             self.policy_net.parameters(), lr=self.lr, amsgrad=True
         )
@@ -315,3 +317,53 @@ class DQNAgent(ArkAgent):
 
         plt.legend()
         plt.show()
+
+    @classmethod
+    def load(cls, env, checkpoint_dir: pathlib.Path, batch_size: int = 128):
+        agent = cls(env, batch_size=batch_size)
+        agent.policy_net.load_state_dict(torch.load(checkpoint_dir / "policy_net.pth"))
+        agent.policy_net.eval()
+        agent.target_net.load_state_dict(agent.policy_net.state_dict())
+        agent.target_net.eval()
+        return agent
+
+    @classmethod
+    def train(
+        cls,
+        env,
+        checkpoint_dir: pathlib.Path,
+        batch_size: int = 128,
+        episodes: int = 1000,
+        save_every: Optional[int] = None,
+    ):
+        agent = cls(env, batch_size=batch_size)
+        screen, info = env.reset()
+
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        c = count()
+
+        for episode in tqdm(range(episodes), desc="Episode: ", position=0):
+            for frame in tqdm(c, desc="Frame: ", position=1):
+                action = agent.get_action(screen, info)
+                # print(action)
+                next_screen, reward, done, next_info = env.step(action)
+                agent.update(screen, info, action, reward, done, next_screen, next_info)
+
+                screen = next_screen
+                info = next_info
+
+                if save_every is not None and frame > 0 and frame % save_every == 0:
+                    checkpoint_dir_ = checkpoint_dir / f"{frame}"
+                    checkpoint_dir_.mkdir(exist_ok=True)
+                    torch.save(
+                        agent.policy_net.state_dict(),
+                        checkpoint_dir_ / "policy_net.pth",
+                    )
+
+                if done:
+                    print(f"Episode {episode}: {reward=}", flush=True)
+                    screen, info = env.reset()
+                    break
+
+        torch.save(agent.policy_net.state_dict(), checkpoint_dir / "policy_net.pth")
