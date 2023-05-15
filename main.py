@@ -28,6 +28,7 @@ app = typer.Typer()
 class Agent(enum.Enum):
     heuristic = "heuristic"
     dqn = "dqn"
+    human = "human"
 
 
 def key_to_action(keys):
@@ -54,15 +55,6 @@ def play(
 ):
     terminal = Terminal()
     env = JoypadSpace(Arkanoid(render), ACTIONS)
-    if agent == Agent.heuristic:
-        agent = HeuristicAgent(env)
-    elif agent == Agent.dqn:
-        if checkpoint_dir is None:
-            raise ValueError(
-                "When using DQN Agent, you need to specify where to load the checkpoint from"
-            )
-        agent = DQNAgent.load(env, checkpoint_dir)
-        print("Loaded agent from checkpoint")
 
     # Set a flag to pause/unpause the game and one to control it
     # This runs in a separate non-blocking thread
@@ -79,6 +71,18 @@ def play(
             pass
 
     keyboard.Listener(on_press=on_press).start()
+
+    if agent == Agent.heuristic:
+        agent = HeuristicAgent(env)
+    elif agent == Agent.dqn:
+        if checkpoint_dir is None:
+            raise ValueError(
+                "When using DQN Agent, you need to specify where to load the checkpoint from"
+            )
+        agent = DQNAgent.load(env, checkpoint_dir)
+        print("Loaded agent from checkpoint")
+    elif agent == Agent.human:
+        human.set()
 
     episodes_finished = 0
 
@@ -119,15 +123,13 @@ def play(
             display["remaining_lives"] = info["remaining_lives"]
             if info["capsule"]["type"] != "None":
                 display["capsule"] = info["capsule"]["type"]
+            display["hit_counter"] = info["hit_counter"]
 
             terminal.writedict(display)
             if render:
                 env.render()
-
-            if human.is_set():
-                time.sleep(0.005)
-            else:
                 time.sleep(1 / fps)
+
             terminal.endframe()
 
     except KeyboardInterrupt:
