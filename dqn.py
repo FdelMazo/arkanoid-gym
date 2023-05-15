@@ -149,12 +149,12 @@ class DQNAgent(ArkAgent):
             info_to_array(env.info).shape[0], env.action_space.n, env
         ).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.lr = 5e-4
-        self.gamma = 0.99
-        self.eps_start = 0.9
-        self.eps_end = 0.05
-        self.eps_decay = 50
+        self.lr = 5e-3
+        self.gamma = 0.3
         self.tau = 1e-3
+        self.eps_start = 0.95
+        self.eps_end = 0.05
+        self.eps_decay = 20
         self.optimizer = torch.optim.AdamW(
             self.policy_net.parameters(), lr=self.lr, amsgrad=True
         )
@@ -171,49 +171,26 @@ class DQNAgent(ArkAgent):
 
     ##@profile
     def get_action(self, screen, info):
-        if self.is_training:
-            sample = random.random()
-            eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(
-                -1.0 * self.training_steps_done / self.eps_decay
-            )
-            self.training_steps_done += 1
-            if sample > eps_threshold:
-                with torch.no_grad():
-                    expected_rewards = self.policy_net(
-                        torch.tensor(
-                            self.policy_net.prepare(info, screen),
-                            device=self.device,
-                            dtype=torch.float32,
-                        ).unsqueeze(0)
-                    )
-                    return expected_rewards.max(1)[1].item()
+        sample = random.random()
+        eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(
+            -1.0 * self.training_steps_done / self.eps_decay
+        )
+        self.training_steps_done += 1
+
+        if sample > eps_threshold:
+            state = torch.tensor(
+                self.policy_net.prepare(info, screen),
+                device=self.device,
+                dtype=torch.float32,
+            ).unsqueeze(0)
+            self.policy_net.eval()
+            with torch.no_grad():
+                expected_rewards = self.policy_net(state)
+            self.policy_net.train()
+            return expected_rewards.max(1)[1].item()
+        else:
             return self.env.action_space.sample(
                 mask=np.array([1, 1, 1, 1], dtype=np.int8)
-            )
-            """return torch.tensor(
-                [
-                    [
-                        self.env.action_space.sample(
-                            mask=np.array([1, 0, 0, 1], dtype=np.int8)
-                        )
-                    ]
-                ],
-                device=self.device,
-                dtype=torch.long,
-            )"""
-
-        # print("not training")
-        with torch.no_grad():
-            return (
-                self.policy_net(
-                    torch.tensor(
-                        self.policy_net.prepare(info, screen),
-                        device=self.device,
-                        dtype=torch.float32,
-                    ).unsqueeze(0)
-                )
-                .max(1)[1]
-                .item()
             )
 
     ##@profile
@@ -284,14 +261,7 @@ class DQNAgent(ArkAgent):
 
         self.loss[self.env.episode].append(loss.item())
 
-    # @profile
-    def update(self, screen, info, action, reward, done, next_screen, next_info):
-        # Store the transition in memory
-        self.memory.push(screen, info, action, reward, next_screen, next_info)
-        self.rewards[self.env.episode].append(reward)
-        # One step optimization on the policy network
-        self.optimize_model()
-
+    def soft_update(self):
         # Soft update of the target network's weights
         # θ′ ← τ θ + (1 −τ )θ′
         target_net_state_dict = self.target_net.state_dict()
@@ -301,6 +271,15 @@ class DQNAgent(ArkAgent):
                 key
             ] * self.tau + target_net_state_dict[key] * (1 - self.tau)
         self.target_net.load_state_dict(target_net_state_dict)
+
+    # @profile
+    def update(self, screen, info, action, reward, done, next_screen, next_info):
+        # Store the transition in memory
+        self.memory.push(screen, info, action, reward, next_screen, next_info)
+        self.rewards[self.env.episode].append(reward)
+        # One step optimization on the policy network
+        self.optimize_model()
+        self.soft_update()
 
     def plot_history(self, last: int = 10):
         fig, (ax_loss, ax_rew) = plt.subplots(nrows=1, ncols=2, figsize=(18, 6))
