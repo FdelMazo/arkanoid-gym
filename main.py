@@ -47,8 +47,8 @@ def key_to_action(keys):
 @app.command()
 def play(
     render: bool = True,
-    fps: int = 50,
-    episodes: int = 1,
+    fps: int = 50, # Set to 0 to go as quick as possible
+    episodes: int = 3,
     frames: Optional[int] = None,
     agent: Agent = Agent.heuristic.value,
     checkpoint_dir: Optional[pathlib.Path] = None,
@@ -86,6 +86,7 @@ def play(
 
     episodes_finished = 0
 
+    scores = []
     try:
         screen, info = env.reset()
 
@@ -111,6 +112,7 @@ def play(
             info = next_info
 
             if done:
+                scores.append(info['score'])
                 screen, info = env.reset()
                 episodes_finished += 1
                 continue
@@ -125,9 +127,11 @@ def play(
                 display["capsule"] = info["capsule"]["type"]
             display["hit_counter"] = info["hit_counter"]
 
+            terminal.write(f"Episode Scores: {scores}\n")
             terminal.writedict(display)
             if render:
                 env.render()
+            if fps:
                 time.sleep(1 / fps)
 
             terminal.endframe()
