@@ -284,8 +284,8 @@ class Arkanoid(NESEnv):
             "remaining_lives": self.remaining_lives,
             "level": self.level,
             "vaus_pos": self.vaus_pos,
-            "ball_grid_x": self.ram[0x010C],
-            "ball_grid_y": self.ram[0x010D],
+            "ball_grid_x": self.ram[0x010D],
+            "ball_grid_y": self.ram[0x010C],
             "ball_x": self.ball_x,  # unconfirmed
             "ball_y": self.ball_y,  # unconfirmed
             "ball_speed": self.ball_speed,
