@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from arkanoid import Arkanoid
 from dqn import DQNAgent
+from qlearning import QLearningAgent
 from heuristic import HeuristicAgent
 from terminal import Terminal
 
@@ -28,6 +29,7 @@ app = typer.Typer()
 class Agent(enum.Enum):
     heuristic = "heuristic"
     dqn = "dqn"
+    qlearning = "qlearning"
     human = "human"
 
 
@@ -81,6 +83,8 @@ def play(
             )
         agent = DQNAgent.load(env, checkpoint_dir)
         print("Loaded agent from checkpoint")
+    elif agent == Agent.qlearning:
+        agent = QLearningAgent(env)
     elif agent == Agent.human:
         agent = HeuristicAgent(env)
         human.set()
