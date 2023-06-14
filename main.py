@@ -18,7 +18,7 @@ from terminal import Terminal
 from typing import Optional
 import pathlib
 
-ACTIONS = [["NOOP"], ["left"], ["right"], ["A"]]
+ACTIONS = [["NOOP"], ["left"], ["right"]]
 
 import enum
 
@@ -33,10 +33,10 @@ class Agent(enum.Enum):
 
 def key_to_action(keys):
     keymap = {
-        pyglet.window.key.S: 0,  # NOOP
+        # pyglet.window.key.S: 0,  # NOOP
         pyglet.window.key.A: 1,  # LEFT
         pyglet.window.key.D: 2,  # RIGHT
-        pyglet.window.key.W: 3,  # A
+        # pyglet.window.key.W: 3,  # A
     }
     try:
         return keymap[keys[0]]
