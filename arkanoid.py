@@ -75,7 +75,7 @@ class Arkanoid(NESEnv):
             for _ in range(30):
                 self._frame_advance(NES_BUTTONS["NOOP"])
 
-        while self.game['delay_automatic_release'] != 120:
+        while self.game['delay_automatic_release'] != 1:
             self._frame_advance(NES_BUTTONS["NOOP"])
 
     # setup any variables to use in the below callbacks here
@@ -243,7 +243,7 @@ class Arkanoid(NESEnv):
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
-        return self.game['remaining_lives'] == 0 and self.game['is_dead']
+        return self.game['remaining_lives'] == 2
 
     @property
     def info(self):
