@@ -25,7 +25,7 @@ When not extended, d(2,3) = 8, d(3,4) = 8, d(4,5) = 8
 """
 
 import numpy as np
-
+import pandas as pd
 from nes_py import NESEnv
 from nes_py._image_viewer import ImageViewer
 
@@ -40,6 +40,15 @@ NES_BUTTONS = {
     "A": 0b00000001,
     "NOOP": 0b00000000,
 }
+
+
+def info_to_array(info):
+    return np.hstack(
+        (
+            pd.json_normalize(info).drop(columns=["bricks.rows"]).iloc[0].values,
+            np.array(info["bricks"]["rows"]).flatten(),
+        )
+    )
 
 
 class Arkanoid(NESEnv):
@@ -57,6 +66,8 @@ class Arkanoid(NESEnv):
                 caption=rom, height=256, width=256, monitor_keyboard=True
             )
         self._prev_score = None
+        self.cols, self.flatten_cols = self._process_columns()
+        self.arrayinfo_shape = self.info_to_array(self.info).shape[0]
 
     def _skip_start_screen(self):
         while self.bricks_remaining != 66:
@@ -291,6 +302,33 @@ class Arkanoid(NESEnv):
 
     def reset(self, seed=None, options=None, return_info=True):
         return super().reset(seed, options, return_info), self._get_info()
+
+    def _process_columns(self):
+        cs = pd.json_normalize(self.info)
+        cols = []
+        flatten_cols = []
+        for c in cs.columns:
+            splitc = tuple(c.split("."))
+            if isinstance(cs.loc[0, c], np.ndarray):
+                flatten_cols.append(splitc)
+            cols.append(splitc)
+
+        cols = tuple(cols)
+        flatten_cols = set(flatten_cols)
+        return cols, flatten_cols
+
+    def info_to_array(self, info):
+        values = []
+        for x in self.cols:
+            y = info
+            for k in x:
+                y = y[k]
+            if x in self.flatten_cols:
+                y = y.flatten()
+            else:
+                y = np.array(y)
+            values.append(y)
+        return np.hstack(values)
 
 
 # explicitly define the outward facing API for the module
