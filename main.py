@@ -82,6 +82,7 @@ def play(
         agent = DQNAgent.load(env, checkpoint_dir)
         print("Loaded agent from checkpoint")
     elif agent == Agent.human:
+        agent = HeuristicAgent(env)
         human.set()
 
     episodes_finished = 0
