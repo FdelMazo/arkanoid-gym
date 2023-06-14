@@ -113,21 +113,22 @@ def play(
             info = next_info
 
             if done:
-                scores.append(info['score'])
+                scores.append(info['game']['score'])
                 screen, info = env.reset()
                 episodes_finished += 1
                 continue
 
             # Print valuable info
             display = {}
+            display["episode"] = episodes_finished
             display["action"] = ACTIONS[action][0]
-            display["score"] = info["score"]
-            display["level"] = info["level"]
-            display["remaining_lives"] = info["remaining_lives"]
-            if info["capsule"]["type"] != "None":
-                display["capsule"] = info["capsule"]["type"]
-            display["hit_counter"] = info["hit_counter"]
-
+            display["game"] = info["game"]
+            # display["vaus"] = info["vaus"]
+            # display["ball"] = info["ball"]
+            # display["bricks"] = info["bricks"]
+            # display["capsule"] = info["capsule"]
+            # if info["capsule"]["type_string"] != "None":
+            #     display["capsule"] = info["capsule"]["type_string"]
             terminal.write(f"Episode Scores: {scores}\n")
             terminal.writedict(display)
             if render:
