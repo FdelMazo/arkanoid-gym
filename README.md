@@ -27,3 +27,4 @@ Options:
     - `human`: Play with the keyboard
     - `heuristic`: Play with a deterministic non-AI agent that should be pretty good
     - `dqn`: Try the Deep Q Network agent
+    - `qlearning`: Try the simple Q-learning agent
