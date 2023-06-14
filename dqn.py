@@ -12,6 +12,9 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
 
 from agent import ArkAgent
 
@@ -78,49 +81,35 @@ class DQN(torch.nn.Module):
         n_actions: int,
         env,
         seed: int = 117,
-        hidden_dim: int = 64,
+        hidden_dim: int = 256,
     ):
         super().__init__()
         self.seed = torch.manual_seed(seed)
-        self.l1 = torch.nn.Linear(n_observations, hidden_dim)
-        self.l2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.l3 = torch.nn.Linear(hidden_dim, n_actions)
-
-        self.cols, self.flatten_cols = self._process_columns(env)
-
-    def _process_columns(self, env):
-        cs = pd.json_normalize(env.info)
-        cols = []
-        flatten_cols = []
-        for c in cs.columns:
-            splitc = tuple(c.split("."))
-            if isinstance(cs.loc[0, c], np.ndarray):
-                flatten_cols.append(splitc)
-            cols.append(splitc)
-
-        cols = tuple(cols)
-        flatten_cols = set(flatten_cols)
-        return cols, flatten_cols
+        # 3 x 240 x 256
+        self.__conv1 = torch.nn.Conv2d(3, 32, kernel_size=8, stride=4, bias=False)
+        # 32 x 59 x 63
+        self.__conv2 = torch.nn.Conv2d(32, 64, kernel_size=4, stride=2, bias=False)
+        # 64 x 28 x 30
+        self.__conv3 = torch.nn.Conv2d(64, 64, kernel_size=2, stride=2, bias=False)
+        # 64 x 14 x 15
+        self.__fc1 = torch.nn.Linear(13440, 1024)
+        self.__fc2 = torch.nn.Linear(1024, n_actions)
+        # self.l1 = torch.nn.Linear(n_observations, hidden_dim)
+        # self.l2 = torch.nn.Linear(hidden_dim, hidden_dim)
+        # self.l3 = torch.nn.Linear(hidden_dim, n_actions)
 
     # @profile
     def forward(self, x):
-        x = torch.nn.functional.relu(self.l1(x))
-        x = torch.nn.functional.relu(self.l2(x))
-        x = self.l3(x)
+        x /= 255
+        for l in [self.__conv1, self.__conv2, self.__conv3]:
+            x = torch.nn.functional.relu(l(x))
+        x = x.flatten()
+        x = torch.nn.functional.relu(self.__fc1(x))
+        x = self.__fc2(x)
+        # x = torch.nn.functional.relu(self.l1(x))
+        # x = torch.nn.functional.relu(self.l2(x))
+        # x = self.l3(x)
         return x
-
-    def prepare(self, info, _screen):
-        values = []
-        for x in self.cols:
-            y = info
-            for k in x:
-                y = y[k]
-            if x in self.flatten_cols:
-                y = y.flatten()
-            else:
-                y = np.array(y)
-            values.append(y)
-        return np.hstack(values)
 
 
 class DQNAgent(ArkAgent):
@@ -178,16 +167,20 @@ class DQNAgent(ArkAgent):
         self.training_steps_done += 1
 
         if sample > eps_threshold:
-            state = torch.tensor(
-                self.policy_net.prepare(info, screen),
-                device=self.device,
-                dtype=torch.float32,
-            ).unsqueeze(0)
+            state = (
+                torch.tensor(
+                    self.policy_net.prepare(info, screen).copy(),
+                    device=self.device,
+                    dtype=torch.float32,
+                )
+                .unsqueeze(0)
+                .permute(0, 3, 1, 2)
+            )
             self.policy_net.eval()
             with torch.no_grad():
                 expected_rewards = self.policy_net(state)
             self.policy_net.train()
-            return expected_rewards.max(1)[1].item()
+            return expected_rewards.max(0)[1].item()
         else:
             return self.env.action_space.sample(
                 mask=np.array([1, 1, 1, 1], dtype=np.int8)
@@ -214,13 +207,14 @@ class DQNAgent(ArkAgent):
             ),
             device=self.device,
             dtype=torch.float32,
-        )
+        ).permute(0, 3, 1, 2)
 
         state_batch = torch.tensor(
             np.array([self.policy_net.prepare(st.info, st.screen) for st in batch]),
             device=self.device,
             dtype=torch.float32,
-        )
+        ).permute(0, 3, 1, 2)
+
         action_batch = torch.tensor(
             [(st.action,) for st in batch], device=self.device, dtype=torch.int64
         )
