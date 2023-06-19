@@ -353,7 +353,7 @@ class DQNAgent(ArkAgent):
                 if done:
                     losses = agent.loss[max(agent.loss.keys())]
                     print(
-                        f"Episode {episode}: final score={env.score} total rewards={episode_score} mean loss = {np.mean(losses):.4f}",
+                        f"Episode {episode}: final score={env.game['score']} total rewards={episode_score} mean loss = {np.mean(losses):.4f}",
                         flush=True,
                     )
                     screen, info = env.reset()

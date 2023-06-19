@@ -70,12 +70,12 @@ class Arkanoid(NESEnv):
         self.arrayinfo_shape = self.info_to_array(self.info).shape[0]
 
     def _skip_start_screen(self):
-        while self.bricks_remaining != 66:
+        while self.bricks['bricks_remaining'] != 66:
             self._frame_advance(NES_BUTTONS["start"])
             for _ in range(30):
                 self._frame_advance(NES_BUTTONS["NOOP"])
 
-        while self.delay_automatic_release != 120:
+        while self.game['delay_automatic_release'] != 1:
             self._frame_advance(NES_BUTTONS["NOOP"])
 
     # setup any variables to use in the below callbacks here
@@ -109,85 +109,93 @@ class Arkanoid(NESEnv):
         self.episode += 1
 
     @property
-    def bricks_remaining(self):
-        return self.ram[0x000F]
-
-    def vaus_status_string(self, status):
-        return {0: "dead", 1: "normal", 2: "extended", 3: "laser"}.get(status)
-
-    @property
-    def vaus_status(self):
-        status = self.ram[0x012A]
-        return status
-
-    @property
-    def is_dead(self):
-        return self.vaus_status_string(self.vaus_status) == "dead"
-
-    @property
-    def vaus_normal(self):
-        return self.vaus_status_string(self.vaus_status) == "normal"
-
-    @property
-    def vaus_extended(self):
-        return self.vaus_status_string(self.vaus_status) == "extended"
-
-    @property
-    def vaus_laser(self):
-        return self.vaus_status_string(self.vaus_status) == "laser"
-
-    @property
-    def remaining_lives(self):
-        return self.ram[0x001D]
-
-    @property
-    def score(self):
-        return self._read_mem_range(0x0370, 6)
-
-    @property
-    def level(self):
-        return self.ram[0x0023]
-
-    @property
-    def vaus_pos(self):
+    def vaus(self):
+        middle_left_x = self.ram[0x011C]
+        middle = middle_left_x + 4
         return {
             "vaus_very_left_x": self.ram[0x011A],
             "vaus_left_x": self.ram[0x011B],
-            "vaus_middle_left_x": self.ram[0x011C],
+            "vaus_middle_left_x": middle_left_x,
+            "vaus_middle": middle,
+            "vaus_middle_grid": int(middle/16),
             "vaus_middle_right_x": self.ram[0x011D],
             "vaus_right_x": self.ram[0x011E],
             "vaus_very_right_x": self.ram[0x011F],
+            "vaus_status": self.ram[0x012A],
+            "vaus_status_string": {0: "dead", 1: "normal", 2: "extended", 3: "laser"}.get(self.ram[0x012A])
         }
 
     @property
-    def ball_speed(self):
-        return self.ram[0x0100]
-
-    @property
-    def hit_counter(self):
-        return self.ram[0x0102]
-
-    def capsule_type_string(self, value: int) -> str:
+    def game(self):
+        distance = abs(int(self.vaus['vaus_middle']) - int(self.ball['ball_x']))
         return {
-            0: None,
-            1: "slow",
-            2: "catch",
-            3: "extend",
-            4: "disrupt",
-            5: "laser",
-            6: "break",
-            7: "player_extend",
-        }.get(value)
+            "remaining_lives": self.ram[0x001D],
+            "score": self._read_mem_range(0x0370, 6),
+            "level": self.ram[0x0023],
+            "hit_counter": self.ram[0x0102],
+            "delay_automatic_release": self.ram[0x0138],
+            "distance_to_ball": distance,
+            "ball_near": distance <= 60,
+            "assume_dead": self.ball['ball_y'] == 26 and not self.ball['ball_contained'],
+            "is_dead": self.vaus['vaus_status_string'] == "dead",
+            "is_catch": self.ram[0x0128],
+            "is_touching": self.ball['ball_y'] == 23 and self.ball['ball_contained'],
+            "will_die": not self.ball['ball_high'] and not self.ball['ball_contained'],
+            "will_touch": not self.ball['ball_high'] and self.ball['ball_contained']
+        }
 
     @property
-    def capsule_type(self):
-        value = self.ram[0x008C]
-        return value
+    def ball(self):
+        ball_x = self.ram[0x0038]
+        ball_side = -1 if ball_x <= self.vaus["vaus_middle"] else 1
+
+        return {
+            "ball_speed": self.ram[0x0100],
+            "ball_side": ball_side,
+            "ball_x": self.ram[0x0038],
+            "ball_y": self.ram[0x0039],
+            "ball_high": False if self.ram[0x0039] == 0 else self.ram[0x0039] <= 20,
+            "ball_contained": self.vaus['vaus_very_left_x'] <= ball_x <= self.vaus['vaus_middle_right_x'],
+            "ball_grid_x": self.ram[0x010D],
+            "ball_grid_y": self.ram[0x010C],
+            "ball_grid_impact": self.ram[0x012E],  # ?
+            "ball_grid_impact_2": self.ram[0x012F],  # ?
+        }
+
+    @property
+    def bricks(self):
+        rows = np.array([
+            [self.ram[0x03A0 + 11 * (i - 1) + j] for j in range(0, 11)]
+            for i in range(1, 25)
+        ])
+        remaining_rows_count = np.count_nonzero(rows, axis=1)
+        remaining_rows_index = np.nonzero(remaining_rows_count)[0]
+        remaining_columns_count = np.count_nonzero(rows, axis=0)
+        remaining_columns_index = np.nonzero(remaining_columns_count)[0]
+        return {
+            "bricks_row": rows,
+            "bricks_row_bool": rows.astype(bool).astype(int),
+            "bricks_rows_remaining_count": remaining_rows_count,
+            "bricks_rows_remaining_index": remaining_rows_index,
+            "bricks_columns_remaining_count": remaining_columns_count,
+            "bricks_columns_remaining_index": remaining_columns_index,
+            "bricks_remaining": self.ram[0x000F]
+        }
 
     @property
     def capsule(self):
         return {
-            "type": self.capsule_type,
+            "type": self.ram[0x008C],
+            "type_string": {
+                0: None,
+                1: "slow",
+                2: "catch",
+                3: "extend",
+                4: "disrupt",
+                5: "laser",
+                6: "break",
+                7: "player_extend",
+            }.get(self.ram[0x008C]),
             "graphic_pos_y": self.ram[0x008F],
             "graphic_pos_x": self.ram[0x0090],
             "pos_y": self.ram[0x0091],
@@ -197,27 +205,6 @@ class Arkanoid(NESEnv):
             "animation_delay_x4": self.ram[0x008D],
             "animation_delay_x1": self.ram[0x008E],
         }
-
-    @property
-    def delay_automatic_release(self):
-        return self.ram[0x0138]
-
-    @property
-    def bricks_rows(self):
-        return np.array(
-            [
-                [self.ram[0x03A0 + 11 * (i - 1) + j] for j in range(0, 11)]
-                for i in range(1, 25)
-            ]
-        )
-
-    @property
-    def ball_x(self):
-        return self.ram[0x0038]
-
-    @property
-    def ball_y(self):
-        return self.ram[0x0039]
 
     def _did_step(self, done):
         """
@@ -230,34 +217,25 @@ class Arkanoid(NESEnv):
             None
 
         """
-        if self.is_dead:
-            while self.is_dead:
-                self._frame_advance(NES_BUTTONS["NOOP"])
-
-    @property
-    def is_touching(self):
-        return self.ball_y == 23 and (
-            self.vaus_pos["vaus_very_left_x"]
-            <= self.ball_x
-            <= self.vaus_pos["vaus_very_right_x"]
-        )
+        while self.game['is_dead']:
+            self._frame_advance(NES_BUTTONS["NOOP"])
 
     def _get_reward(self):
         """Return the reward after a step occurs."""
-        if self.is_dead:
+        if self.game['is_dead']:
             #   print("Died: -100")
             return -1000
 
-        if self.is_touching:
+        if self.game['is_touching']:
             #    print("Touching: +1")
             return 50
 
         if self._prev_score is None:
-            self._prev_score = self.score
-            return self.score
+            self._prev_score = self.game['score']
+            return self.game['score']
 
-        delta = self.score - self._prev_score
-        self._prev_score = self.score
+        delta = self.game['score'] - self._prev_score
+        self._prev_score = self.game['score']
 
         # if delta > 0:
         #    print(f"Delta: {delta}")
@@ -265,11 +243,7 @@ class Arkanoid(NESEnv):
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
-        return self.remaining_lives == 0 and self.is_dead
-
-    @property
-    def is_catch(self):
-        return self.ram[0x0128]
+        return self.game['remaining_lives'] == 2
 
     @property
     def info(self):
@@ -280,24 +254,11 @@ class Arkanoid(NESEnv):
         """Return the info after a step occurs."""
         # source: http://www.romdetectives.com/Wiki/index.php?title=Arkanoid_(NES)_-_RAM
         return {
-            "score": self.score,
-            "remaining_lives": self.remaining_lives,
-            "level": self.level,
-            "vaus_pos": self.vaus_pos,
-            "ball_grid_x": self.ram[0x010D],
-            "ball_grid_y": self.ram[0x010C],
-            "ball_x": self.ball_x,  # unconfirmed
-            "ball_y": self.ball_y,  # unconfirmed
-            "ball_speed": self.ball_speed,
-            "hit_counter": self.hit_counter,
-            "catch": self.is_catch,
-            "vaus_status": self.vaus_status,
-            "ball_grid_impact": self.ram[0x012E],  # ?
-            "ball_grid_impact_2": self.ram[0x012F],  # ?
+            "game": self.game,
+            "vaus": self.vaus,
+            "ball": self.ball,
             "capsule": self.capsule,
-            "delay_automatic_release": self.delay_automatic_release,
-            "is_touching": self.is_touching,
-            "bricks": {"remaining": self.bricks_remaining, "rows": self.bricks_rows},
+            "bricks": self.bricks,
         }
 
     def reset(self, seed=None, options=None, return_info=True):
