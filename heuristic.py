@@ -13,13 +13,13 @@ class HeuristicAgent(ArkAgent):
         #     self.shot_laser += 1
         # if self.shot_laser % 2 == 0 and info['vaus']["vaus_status_string"] == "laser":
         #     action = 3
-        if info['ball']["ball_x"] < info["vaus"]["vaus_left_x"]:
+        if info["ball"]["ball_x"] < info["vaus"]["vaus_left_x"]:
             action = 1
-        elif info['ball']["ball_x"] > info["vaus"]["vaus_right_x"]:
+        elif info["ball"]["ball_x"] > info["vaus"]["vaus_right_x"]:
             action = 2
         else:
             action = self.env.action_space.sample(
-                mask=np.array([1, 0, 0], dtype=np.int8)
+                mask=np.array([1, 0, 0, 1], dtype=np.int8)
             )
         return action
 
