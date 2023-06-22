@@ -18,15 +18,26 @@ class QLearningAgent(ArkAgent):
         env,
         learning_rate: float = 0.1,
         discount_factor: float = 0.9,
-        exploration_rate: float = 0.15,
+        exploration_rate_start: float = 0.95,
+        exploration_rate_end: float = 0.05,
+        exploration_rate_decay: float = 50000,
     ):
         self.env = env
+        self.steps = 0
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
-        self.exploration_rate = exploration_rate
+        self.exploration_rate_start = exploration_rate_start
+        self.exploration_rate_end = exploration_rate_end
+        self.exploration_rate_decay = exploration_rate_decay
+        self.exploration_rate = exploration_rate_start
         self.q_table = defaultdict(lambda: np.zeros(env.action_space.n))
 
     def get_action(self, _screen, info):
+        self.steps += 1
+        self.exploration_rate = self.exploration_rate_end + (
+            self.exploration_rate_start - self.exploration_rate_end
+        ) * np.exp(-1.0 * self.steps / self.exploration_rate_decay)
+
         if np.random.rand() < self.exploration_rate:
             action = self.env.action_space.sample()
         else:
