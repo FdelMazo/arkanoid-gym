@@ -28,7 +28,8 @@ class QLearningAgent(ArkAgent):
         self.exploration_rate_end = exploration_rate_end
         self.exploration_rate_decay = exploration_rate_decay
         self.exploration_rate = exploration_rate_start
-        self.q_table = defaultdict(lambda: np.zeros(env.action_space.n))
+        # We avoid the "A" button
+        self.q_table = defaultdict(lambda: np.zeros(env.action_space.n - 1))
 
     def get_action(self, _screen, info):
         self.steps += 1
@@ -37,7 +38,9 @@ class QLearningAgent(ArkAgent):
         ) * np.exp(-1.0 * self.steps / self.exploration_rate_decay)
 
         if np.random.rand() < self.exploration_rate:
-            action = self.env.action_space.sample()
+            action = self.env.action_space.sample(
+                mask=np.array([1, 1, 1, 0], dtype=np.int8)
+            )
         else:
             q_values = self.q_table[state(info)]
             max_q = np.max(q_values)
