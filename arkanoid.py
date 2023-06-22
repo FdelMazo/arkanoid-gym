@@ -167,7 +167,10 @@ class Arkanoid(NESEnv):
     @property
     def ball(self):
         ball_x = self.ram[0x0038]
-        ball_side = -1 if ball_x <= self.vaus["vaus_middle"] else 1
+        ball_contained = self.vaus['vaus_very_left_x'] <= ball_x <= self.vaus['vaus_middle_right_x']
+        ball_side = 0
+        if not ball_contained:
+            ball_side = -1 if ball_x <= self.vaus["vaus_very_left_x"] else 1
 
         return {
             "ball_speed": self.ram[0x0100],
@@ -175,9 +178,7 @@ class Arkanoid(NESEnv):
             "ball_x": self.ram[0x0038],
             "ball_y": self.ram[0x0039],
             "ball_high": False if self.ram[0x0039] == 0 else self.ram[0x0039] <= 20,
-            "ball_contained": self.vaus["vaus_very_left_x"]
-            <= ball_x
-            <= self.vaus["vaus_middle_right_x"],
+            "ball_contained": ball_contained,
             "ball_grid_x": self.ram[0x010D],
             "ball_grid_y": self.ram[0x010C],
             "ball_grid_impact": self.ram[0x012E],  # ?
@@ -246,7 +247,11 @@ class Arkanoid(NESEnv):
 
     def _get_reward(self):
         """Return the reward after a step occurs."""
-        if self.game["is_dead"]:
+        # Distance based reward -> Use with qlearning
+        # return 150 - self.game['distance_to_ball']
+
+        # Smart reward -> Use with DQN
+        if self.game['is_dead']:
             #   print("Died: -100")
             return -1000
 
