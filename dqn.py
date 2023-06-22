@@ -83,7 +83,7 @@ class DQN_CNN(nn.Module):
         super().__init__()
         n_actions = env.action_space.n
         self.network = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=8, stride=4, padding=1),
+            nn.Conv2d(1, 32, kernel_size=8, stride=4, padding=1),
             nn.MaxPool2d(2, 2),
             nn.GELU(),
             nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
@@ -132,8 +132,8 @@ class DQN(nn.Module):
 
     def forward(self, screen, info):
         x_cnn = self.dqn_cnn(screen)
-        # x_tab = self.dqn_tab(info)
-        # y = torch.concat((x_cnn,x_tab), dim=1)
+        x_tab = self.dqn_tab(info)
+        y = torch.concat((x_cnn, x_tab), dim=1)
         y = x_cnn
         y = self.__l1(y)
         y = F.relu(y)
@@ -196,19 +196,23 @@ class DQNAgent(ArkAgent):
                 # t.max(1) will return the largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                q_values = self.policy_net(screen, info)
-                max_q_value = torch.tensor(
-                    [q_values.argmax(1).item()], device=self.device, dtype=torch.long
-                )
-                return max_q_value.item()
+                q_values = self.policy_net(screen.unsqueeze(0), info.unsqueeze(0))
+                return q_values.argmax(1).item()
+                # max_q_value = torch.tensor(
+                #    [q_values.argmax(1).item()], device=self.device, dtype=torch.long
+                # )
+                # return max_q_value.item()
         else:
-            return torch.tensor(
-                self.env.action_space.sample(
-                    mask=np.array([1, 1, 1, 1], dtype=np.int8)
-                ),
-                device=self.device,
-                dtype=torch.long,
-            ).item()
+            return self.env.action_space.sample(
+                mask=np.array([1, 1, 1, 1], dtype=np.int8)
+            )
+            # return torch.tensor(
+            #    self.env.action_space.sample(
+            #        mask=np.array([1, 1, 1, 1], dtype=np.int8)
+            #    ),
+            #    device=self.device,
+            #    dtype=torch.long,
+            # ).item()
 
     ##@profile
     def optimize_model(self):
@@ -232,13 +236,13 @@ class DQNAgent(ArkAgent):
             torch.cat([t.next_screen for t in batch if t.next_screen is not None])
             .to(self.device)
             .type(torch.float32)
-        )
+        ).unsqueeze(1)
 
         screen_batch = (
             torch.cat([t.screen for t in batch if t.screen is not None])
             .to(self.device)
             .type(torch.float32)
-        )
+        ).unsqueeze(1)
 
         info_batch = (
             torch.stack([t.info for t in batch if t.info is not None])
@@ -305,9 +309,6 @@ class DQNAgent(ArkAgent):
     # @profile
     def update(self, screen, info, action, reward, done, next_screen, next_info):
         # Store the transition in memory
-        info = torch.tensor(info)
-        next_info = torch.tensor(next_info)
-
         self.memory.push(screen, info, action, reward, next_screen, next_info)
         self.rewards[self.env.episode].append(reward)
         # One step optimization on the policy network
@@ -370,31 +371,25 @@ class DQNAgent(ArkAgent):
             screen, info = env.reset()
             episode_score = 0
 
-            screen = (
-                torch.tensor(
-                    rgb2gray(env.crop_screen(screen)),
-                    dtype=torch.float32,
-                    device=agent.device,
-                )
-                .unsqueeze(0)
-                .permute(0, 3, 1, 2)
-            )
-            info = env.info_to_array(info)
+            screen = torch.tensor(
+                rgb2gray(env.crop_screen(screen)),
+                dtype=torch.float32,
+                device=agent.device,
+            ).unsqueeze(0)
+            info = torch.tensor(env.info_to_array(info), device=agent.device)
 
             for frame in tqdm(c, desc="Frame: ", position=1):
                 action = agent.get_action(screen, info)
                 next_screen, reward, done, next_info = env.step(action)
 
-                next_screen = (
-                    torch.tensor(
-                        env.crop_screen(next_screen).copy(),
-                        dtype=torch.float32,
-                        device=agent.device,
-                    )
-                    .unsqueeze(0)
-                    .permute(0, 3, 1, 2)
+                next_screen = torch.tensor(
+                    rgb2gray(env.crop_screen(next_screen)),
+                    dtype=torch.float32,
+                    device=agent.device,
+                ).unsqueeze(0)
+                next_info = torch.tensor(
+                    env.info_to_array(next_info), device=agent.device
                 )
-                next_info = env.info_to_array(next_info)
 
                 episode_score += reward
                 agent.update(screen, info, action, reward, done, next_screen, next_info)
