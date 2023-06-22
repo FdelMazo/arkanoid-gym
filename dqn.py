@@ -35,8 +35,11 @@ class StateTransition:
 def info_to_array(info):
     return np.hstack(
         (
-            pd.json_normalize(info).drop(columns=["bricks.rows"]).iloc[0].values,
-            np.array(info["bricks"]["rows"]).flatten(),
+            pd.json_normalize(info)
+            .drop(columns=sorted(["bricks.bricks_row"]))
+            .iloc[0]
+            .values,
+            np.array(info["bricks"]["bricks_row"]).flatten(),
         )
     )
 
