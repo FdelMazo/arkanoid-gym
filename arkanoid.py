@@ -41,14 +41,28 @@ NES_BUTTONS = {
     "NOOP": 0b00000000,
 }
 
+INFO_COLS = [
+    "ball.ball_grid_x",
+    "ball.ball_grid_y",
+    "ball.ball_speed",
+    "vaus.vaus_status",
+    "capsule.type",
+    "capsule.pos_x",
+    "capsule.pos_y",
+    "game.is_touching",
+    "vaus.vaus_very_left_x",
+    "vaus.vaus_left_x",
+    "vaus.vaus_middle",
+    "vaus.vaus_middle_grid",
+    "vaus.vaus_middle_right_x",
+    "vaus.vaus_right_x",
+    "vaus.vaus_very_right_x",
+    "vaus.vaus_status",
+]
+
 
 def info_to_array(info):
-    return np.hstack(
-        (
-            pd.json_normalize(info).drop(columns=["bricks.rows"]).iloc[0].values,
-            np.array(info["bricks"]["rows"]).flatten(),
-        )
-    )
+    return pd.json_normalize(info)[INFO_COLS].iloc[0].values.astype(np.float32)
 
 
 class Arkanoid(NESEnv):
@@ -70,12 +84,12 @@ class Arkanoid(NESEnv):
         self.arrayinfo_shape = self.info_to_array(self.info).shape[0]
 
     def _skip_start_screen(self):
-        while self.bricks['bricks_remaining'] != 66:
+        while self.bricks["bricks_remaining"] != 66:
             self._frame_advance(NES_BUTTONS["start"])
             for _ in range(30):
                 self._frame_advance(NES_BUTTONS["NOOP"])
 
-        while self.game['delay_automatic_release'] != 1:
+        while self.game["delay_automatic_release"] != 1:
             self._frame_advance(NES_BUTTONS["NOOP"])
 
     # setup any variables to use in the below callbacks here
@@ -117,17 +131,22 @@ class Arkanoid(NESEnv):
             "vaus_left_x": self.ram[0x011B],
             "vaus_middle_left_x": middle_left_x,
             "vaus_middle": middle,
-            "vaus_middle_grid": int(middle/16),
+            "vaus_middle_grid": int(middle / 16),
             "vaus_middle_right_x": self.ram[0x011D],
             "vaus_right_x": self.ram[0x011E],
             "vaus_very_right_x": self.ram[0x011F],
             "vaus_status": self.ram[0x012A],
-            "vaus_status_string": {0: "dead", 1: "normal", 2: "extended", 3: "laser"}.get(self.ram[0x012A])
+            "vaus_status_string": {
+                0: "dead",
+                1: "normal",
+                2: "extended",
+                3: "laser",
+            }.get(self.ram[0x012A]),
         }
 
     @property
     def game(self):
-        distance = abs(int(self.vaus['vaus_middle']) - int(self.ball['ball_x']))
+        distance = abs(int(self.vaus["vaus_middle"]) - int(self.ball["ball_x"]))
         return {
             "remaining_lives": self.ram[0x001D],
             "score": self._read_mem_range(0x0370, 6),
@@ -136,12 +155,13 @@ class Arkanoid(NESEnv):
             "delay_automatic_release": self.ram[0x0138],
             "distance_to_ball": distance,
             "ball_near": distance <= 60,
-            "assume_dead": self.ball['ball_y'] == 26 and not self.ball['ball_contained'],
-            "is_dead": self.vaus['vaus_status_string'] == "dead",
+            "assume_dead": self.ball["ball_y"] == 26
+            and not self.ball["ball_contained"],
+            "is_dead": self.vaus["vaus_status_string"] == "dead",
             "is_catch": self.ram[0x0128],
-            "is_touching": self.ball['ball_y'] == 23 and self.ball['ball_contained'],
-            "will_die": not self.ball['ball_high'] and not self.ball['ball_contained'],
-            "will_touch": not self.ball['ball_high'] and self.ball['ball_contained']
+            "is_touching": self.ball["ball_y"] == 23 and self.ball["ball_contained"],
+            "will_die": not self.ball["ball_high"] and not self.ball["ball_contained"],
+            "will_touch": not self.ball["ball_high"] and self.ball["ball_contained"],
         }
 
     @property
@@ -155,7 +175,9 @@ class Arkanoid(NESEnv):
             "ball_x": self.ram[0x0038],
             "ball_y": self.ram[0x0039],
             "ball_high": False if self.ram[0x0039] == 0 else self.ram[0x0039] <= 20,
-            "ball_contained": self.vaus['vaus_very_left_x'] <= ball_x <= self.vaus['vaus_middle_right_x'],
+            "ball_contained": self.vaus["vaus_very_left_x"]
+            <= ball_x
+            <= self.vaus["vaus_middle_right_x"],
             "ball_grid_x": self.ram[0x010D],
             "ball_grid_y": self.ram[0x010C],
             "ball_grid_impact": self.ram[0x012E],  # ?
@@ -164,10 +186,12 @@ class Arkanoid(NESEnv):
 
     @property
     def bricks(self):
-        rows = np.array([
-            [self.ram[0x03A0 + 11 * (i - 1) + j] for j in range(0, 11)]
-            for i in range(1, 25)
-        ])
+        rows = np.array(
+            [
+                [self.ram[0x03A0 + 11 * (i - 1) + j] for j in range(0, 11)]
+                for i in range(1, 25)
+            ]
+        )
         remaining_rows_count = np.count_nonzero(rows, axis=1)
         remaining_rows_index = np.nonzero(remaining_rows_count)[0]
         remaining_columns_count = np.count_nonzero(rows, axis=0)
@@ -179,7 +203,7 @@ class Arkanoid(NESEnv):
             "bricks_rows_remaining_index": remaining_rows_index,
             "bricks_columns_remaining_count": remaining_columns_count,
             "bricks_columns_remaining_index": remaining_columns_index,
-            "bricks_remaining": self.ram[0x000F]
+            "bricks_remaining": self.ram[0x000F],
         }
 
     @property
@@ -217,25 +241,25 @@ class Arkanoid(NESEnv):
             None
 
         """
-        while self.game['is_dead']:
+        while self.game["is_dead"]:
             self._frame_advance(NES_BUTTONS["NOOP"])
 
     def _get_reward(self):
         """Return the reward after a step occurs."""
-        if self.game['is_dead']:
+        if self.game["is_dead"]:
             #   print("Died: -100")
             return -1000
 
-        if self.game['is_touching']:
+        if self.game["is_touching"]:
             #    print("Touching: +1")
-            return 50
+            return 1
 
         if self._prev_score is None:
-            self._prev_score = self.game['score']
-            return self.game['score']
+            self._prev_score = self.game["score"]
+            return self.game["score"]
 
-        delta = self.game['score'] - self._prev_score
-        self._prev_score = self.game['score']
+        delta = self.game["score"] - self._prev_score
+        self._prev_score = self.game["score"]
 
         # if delta > 0:
         #    print(f"Delta: {delta}")
@@ -243,7 +267,7 @@ class Arkanoid(NESEnv):
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
-        return self.game['remaining_lives'] == 2
+        return self.game["remaining_lives"] == 0
 
     @property
     def info(self):
@@ -278,7 +302,11 @@ class Arkanoid(NESEnv):
         flatten_cols = set(flatten_cols)
         return cols, flatten_cols
 
+    def crop_screen(self, screen):
+        return screen[16:, 16:192, :]
+
     def info_to_array(self, info):
+        return info_to_array(info)
         values = []
         for x in self.cols:
             y = info
