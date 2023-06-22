@@ -19,7 +19,7 @@ from terminal import Terminal
 from typing import Optional
 import pathlib
 
-ACTIONS = [["NOOP"], ["left"], ["right"]]
+ACTIONS = [["NOOP"], ["left"], ["right"], ["A"]]
 
 import enum
 
@@ -49,7 +49,7 @@ def key_to_action(keys):
 @app.command()
 def play(
     render: bool = True,
-    fps: int = 50, # Set to 0 to go as quick as possible
+    fps: int = 50,  # Set to 0 to go as quick as possible
     episodes: int = 3,
     frames: Optional[int] = None,
     agent: Agent = Agent.heuristic.value,
@@ -117,7 +117,7 @@ def play(
             info = next_info
 
             if done:
-                scores.append(info['game']['score'])
+                scores.append(info["game"]["score"])
                 screen, info = env.reset()
                 episodes_finished += 1
                 continue
