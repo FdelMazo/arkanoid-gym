@@ -5,10 +5,8 @@ import numpy as np
 
 def state(info):
     state = [
-        # info['vaus']['vaus_middle_grid'],
-        # info['ball']['ball_high'],
+        info['vaus']['vaus_middle'],
         info['ball']['ball_side'],
-        # info['bricks']['bricks_row_bool'],
     ]
     return str(state)
 

@@ -225,6 +225,10 @@ class Arkanoid(NESEnv):
 
     def _get_reward(self):
         """Return the reward after a step occurs."""
+        # Distance based reward -> Use with qlearning
+        # return 150 - self.game['distance_to_ball']
+
+        # Smart reward -> Use with DQN
         if self.game['is_dead']:
             #   print("Died: -100")
             return -1000
