@@ -32,6 +32,10 @@ class StateTransition:
     next_info: Dict
 
 
+def rgb2gray(rgb):
+    return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
+
+
 # @profile
 def info_to_array(info):
     return np.hstack(
@@ -193,6 +197,15 @@ class DQNAgent(ArkAgent):
 
     ##@profile
     def get_action(self, screen, info):
+        if not isinstance(screen, torch.Tensor):
+            screen = torch.tensor(
+                rgb2gray(self.env.crop_screen(screen)),
+                dtype=torch.float32,
+                device=self.device,
+            ).unsqueeze(0)
+        if not isinstance(info, torch.Tensor):
+            info = torch.tensor(self.env.info_to_array(info), device=self.device)
+
         sample = random.random()
         eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(
             -1.0 * self.training_steps_done / self.eps_decay
@@ -320,6 +333,25 @@ class DQNAgent(ArkAgent):
 
     # @profile
     def update(self, screen, info, action, reward, done, next_screen, next_info):
+        if not isinstance(screen, torch.Tensor):
+            screen = torch.tensor(
+                rgb2gray(self.env.crop_screen(screen)),
+                dtype=torch.float32,
+                device=self.device,
+            ).unsqueeze(0)
+        if not isinstance(next_screen, torch.Tensor):
+            next_screen = torch.tensor(
+                rgb2gray(self.env.crop_screen(next_screen)),
+                dtype=torch.float32,
+                device=self.device,
+            ).unsqueeze(0)
+        if not isinstance(info, torch.Tensor):
+            info = torch.tensor(self.env.info_to_array(info), device=self.device)
+        if not isinstance(next_info, torch.Tensor):
+            next_info = torch.tensor(
+                self.env.info_to_array(next_info), device=self.device
+            )
+
         # Store the transition in memory
         self.memory.push(screen, info, action, reward, next_screen, next_info)
         self.rewards[self.env.episode].append(reward)
