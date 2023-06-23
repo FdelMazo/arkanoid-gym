@@ -175,6 +175,11 @@ class DQNAgent(ArkAgent):
         self.batch_size = batch_size
         self.loss = defaultdict(list)
         self.rewards = defaultdict(list)
+        self.scores = dict()
+
+    @property
+    def durations(self):
+        return {k: len(v) - 1 for k, v in self.rewards.items()}
 
     def toggle_train(self):
         self.train = not self.train
@@ -348,9 +353,6 @@ class DQNAgent(ArkAgent):
         batch_size: int = 128,
         episodes: int = 1000,
         resume: bool = False,
-        eps_start=0.95,
-        eps_end=0.05,
-        eps_decay=0.998,
         save_every: Optional[int] = None,
     ):
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
