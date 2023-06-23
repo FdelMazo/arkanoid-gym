@@ -1,3 +1,4 @@
+"""Abstract class that agents are expected to implement."""
 from abc import ABC, abstractmethod
 
 
