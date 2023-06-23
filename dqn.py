@@ -355,9 +355,11 @@ class DQNAgent(ArkAgent):
         # Store the transition in memory
         self.memory.push(screen, info, action, reward, next_screen, next_info)
         self.rewards[self.env.episode].append(reward)
-        # One step optimization on the policy network
-        self.optimize_model()
-        self.soft_update()
+
+        if self.is_training:
+            # One step optimization on the policy network
+            self.optimize_model()
+            self.soft_update()
 
     def plot_history(self, last: int = 10):
         fig, (ax_loss, ax_rew) = plt.subplots(nrows=1, ncols=2, figsize=(18, 6))
@@ -377,7 +379,7 @@ class DQNAgent(ArkAgent):
 
     @classmethod
     def load(cls, env, checkpoint_dir: pathlib.Path, batch_size: int = 128):
-        agent = cls(env, batch_size=batch_size)
+        agent = cls(env, batch_size=batch_size, train=False)
         agent.policy_net.load_state_dict(torch.load(checkpoint_dir / "policy_net.pth"))
         agent.policy_net.eval()
         agent.target_net.load_state_dict(agent.policy_net.state_dict())
