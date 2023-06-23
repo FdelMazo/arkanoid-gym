@@ -1,14 +1,18 @@
+"""QLearning agent."""
+
 import random
 from collections import defaultdict
 from agent import ArkAgent
 import numpy as np
 
+
 def state(info):
     state = [
-        info['vaus']['vaus_middle'],
-        info['ball']['ball_side'],
+        info["vaus"]["vaus_middle"],
+        info["ball"]["ball_side"],
     ]
     return str(state)
+
 
 class QLearningAgent(ArkAgent):
     def __init__(

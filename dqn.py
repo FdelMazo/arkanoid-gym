@@ -1,3 +1,5 @@
+"""DQN agent."""
+
 import math
 import operator as ops
 import random
