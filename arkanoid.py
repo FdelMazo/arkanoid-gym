@@ -259,7 +259,7 @@ class Arkanoid(NESEnv):
 
         if self.game["is_touching"]:
             #    print("Touching: +1")
-            return 10
+            return 5
 
         if self._prev_score is None:
             self._prev_score = self.game["score"]
@@ -274,7 +274,7 @@ class Arkanoid(NESEnv):
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
-        return self.game["remaining_lives"] == 2
+        return self.game["remaining_lives"] == 1
 
     @property
     def info(self):
