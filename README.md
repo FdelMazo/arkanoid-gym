@@ -6,11 +6,11 @@ Python playground to train an AI model to win at Arkanoid (NES)
 
 Project for 95.25 Inteligencia Artificial
 
-[Mermet, Ignacio Javier](https://github.com/CrossNox)
-[del Mazo, Federico](https://github.com/FdelMazo)
-[Faretta, Yanina Belen](https://github.com/yaninafaretta)
-[Gomez, Joaquin](https://github.com/joaqogomez)
-[Souza, Martina](https://github.com/MartiSouza)
+* [Mermet, Ignacio Javier](https://github.com/CrossNox)
+* [del Mazo, Federico](https://github.com/FdelMazo)
+* [Faretta, Yanina Belen](https://github.com/yaninafaretta)
+* [Gomez, Joaquin](https://github.com/joaqogomez)
+* [Souza, Martina](https://github.com/MartiSouza)
 
 ## Install dependencies and run
 This project uses python3.9+.
