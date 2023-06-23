@@ -4,6 +4,14 @@ Python playground to train an AI model to win at Arkanoid (NES)
 
 ![demo](demo.gif)
 
+Project for 95.25 Inteligencia Artificial
+
+[Mermet, Ignacio Javier](https://github.com/CrossNox)
+[del Mazo, Federico](https://github.com/FdelMazo)
+[Faretta, Yanina Belen](https://github.com/yaninafaretta)
+[Gomez, Joaquin](https://github.com/joaqogomez)
+[Souza, Martina](https://github.com/MartiSouza)
+
 ## Install dependencies and run
 This project uses python3.9+.
 
@@ -36,7 +44,7 @@ Options:
     - `dqn`: Try the Deep Q Network agent
     - `qlearning`: Try the simple Q-learning agent
 
-## Train
+## Train DQN
 ```bash
 Usage: main.py train [OPTIONS]
 
@@ -57,3 +65,4 @@ You can select how many episodes to train the `DQN` agent with using `--episodes
 
 # Notebooks
 - `DQN-tests.ipynb` replicates the training loop used in the code from the DQN Agent to explore training later.
+- `qlearning-tests.ipynb`: run a series of tests for the qlearning agent
