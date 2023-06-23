@@ -175,6 +175,9 @@ class DQNAgent(ArkAgent):
         self.batch_size = batch_size
         self.loss = defaultdict(list)
         self.rewards = defaultdict(list)
+        self.actions = defaultdict(
+            lambda: {i: 0 for i in range(self.env.action_space.n)}
+        )
         self.scores = dict()
 
     @property
@@ -202,15 +205,19 @@ class DQNAgent(ArkAgent):
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
                 q_values = self.policy_net(screen.unsqueeze(0), info.unsqueeze(0))
-                return q_values.argmax(1).item()
-                # max_q_value = torch.tensor(
-                #    [q_values.argmax(1).item()], device=self.device, dtype=torch.long
-                # )
-                # return max_q_value.item()
+                action = q_values.argmax(1).item()
+                self.actions[self.env.episode][action] += 1
+                return action
+            # max_q_value = torch.tensor(
+            #    [q_values.argmax(1).item()], device=self.device, dtype=torch.long
+            # )
+            # return max_q_value.item()
         else:
-            return self.env.action_space.sample(
+            action = self.env.action_space.sample(
                 mask=np.array([1, 1, 1, 1], dtype=np.int8)
             )
+            self.actions[self.env.episode][action] += 1
+            return action
             # return torch.tensor(
             #    self.env.action_space.sample(
             #        mask=np.array([1, 1, 1, 1], dtype=np.int8)
@@ -413,6 +420,7 @@ class DQNAgent(ArkAgent):
 
                 if done:
                     losses = agent.loss[env.episode]
+                    agent.scores[env.episode] = episode_score
                     print(
                         f"Episode {episode}: final score={env.game['score']} total rewards={episode_score} mean loss = {torch.mean(torch.tensor(losses)):.4f}",
                         flush=True,
