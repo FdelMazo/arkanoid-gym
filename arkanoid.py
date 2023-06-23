@@ -169,7 +169,7 @@ class Arkanoid(NESEnv):
     def ball(self):
         ball_x = self.ram[0x0038]
         ball_contained = (
-            self.vaus["vaus_very_left_x"] <= ball_x <= self.vaus["vaus_middle_right_x"]
+            self.vaus["vaus_very_left_x"] <= ball_x <= self.vaus["vaus_very_right_x"]
         )
         ball_side = 0
         if not ball_contained:
