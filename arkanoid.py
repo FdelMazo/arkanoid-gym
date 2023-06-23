@@ -121,6 +121,7 @@ class Arkanoid(NESEnv):
         """Handle any RAM hacking after a reset occurs."""
         self._skip_start_screen()
         self.episode += 1
+        self._prev_score = None
 
     @property
     def vaus(self):
