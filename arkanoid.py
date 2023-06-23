@@ -167,7 +167,9 @@ class Arkanoid(NESEnv):
     @property
     def ball(self):
         ball_x = self.ram[0x0038]
-        ball_contained = self.vaus['vaus_very_left_x'] <= ball_x <= self.vaus['vaus_middle_right_x']
+        ball_contained = (
+            self.vaus["vaus_very_left_x"] <= ball_x <= self.vaus["vaus_middle_right_x"]
+        )
         ball_side = 0
         if not ball_contained:
             ball_side = -1 if ball_x <= self.vaus["vaus_very_left_x"] else 1
@@ -251,13 +253,13 @@ class Arkanoid(NESEnv):
         # return 150 - self.game['distance_to_ball']
 
         # Smart reward -> Use with DQN
-        if self.game['is_dead']:
+        if self.game["is_dead"]:
             #   print("Died: -100")
-            return -1000
+            return -100
 
         if self.game["is_touching"]:
             #    print("Touching: +1")
-            return 1
+            return 10
 
         if self._prev_score is None:
             self._prev_score = self.game["score"]
@@ -272,7 +274,7 @@ class Arkanoid(NESEnv):
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise."""
-        return self.game["remaining_lives"] == 0
+        return self.game["remaining_lives"] == 2
 
     @property
     def info(self):
