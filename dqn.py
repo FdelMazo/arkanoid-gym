@@ -83,9 +83,9 @@ class ReplayMemory:
 
 
 class DQN_CNN(nn.Module):
-    def __init__(self, env):
+    def __init__(self, seed: int = 117, last_dim: int = 16):
         super().__init__()
-        n_actions = env.action_space.n
+        self.seed = torch.manual_seed(seed)
         self.network = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=8, stride=4, padding=1),
             nn.MaxPool2d(2, 2),
@@ -97,7 +97,7 @@ class DQN_CNN(nn.Module):
             nn.MaxPool2d(2, 2),
             nn.GELU(),
             nn.Flatten(),
-            nn.Linear(384, 32),
+            nn.Linear(384, last_dim),
             nn.GELU(),
         )
 
@@ -109,13 +109,13 @@ class DQN_CNN(nn.Module):
 
 
 class DQN_TAB(nn.Module):
-    def __init__(self, env, seed: int = 117, hidden_dim: int = 256):
+    def __init__(self, env, seed: int = 117, hidden_dim: int = 16):
         super().__init__()
         self.seed = torch.manual_seed(seed)
         self.network = nn.Sequential(
-            nn.Linear(env.arrayinfo_shape, hidden_dim * 4),
+            nn.Linear(env.arrayinfo_shape, 4 * hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.Linear(4 * hidden_dim, hidden_dim),
             nn.ReLU(),
             # nn.Linear(hidden_dim, env.action_space.n)
         )
@@ -125,20 +125,17 @@ class DQN_TAB(nn.Module):
 
 
 class DQN(nn.Module):
-    def __init__(self, env, seed: int = 117, hidden_dim: int = 256):
+    def __init__(self, env, seed: int = 117, hidden_dim: int = 16):
         super().__init__()
         self.dqn_tab = DQN_TAB(env, seed, hidden_dim)
-        self.dqn_cnn = DQN_CNN(env)
-        dqn_size = 256
-        cnn_size = 32
-        self.__l1 = nn.Linear(cnn_size, 16)
-        self.__l2 = nn.Linear(16, 4)
+        self.dqn_cnn = DQN_CNN(seed, hidden_dim)
+        self.__l1 = nn.Linear(2 * hidden_dim, hidden_dim)
+        self.__l2 = nn.Linear(hidden_dim, 4)
 
     def forward(self, screen, info):
         x_cnn = self.dqn_cnn(screen)
         x_tab = self.dqn_tab(info)
         y = torch.concat((x_cnn, x_tab), dim=1)
-        y = x_cnn
         y = self.__l1(y)
         y = F.relu(y)
         y = self.__l2(y)
