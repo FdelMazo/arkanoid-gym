@@ -166,6 +166,11 @@ class DQNAgent(ArkAgent):
         self.episode_durations = []
         self.policy_net = DQN(env).to(self.device)
         self.target_net = DQN(env).to(self.device)
+
+        if not self.is_training:
+            self.policy_net.eval()
+            self.target_net.eval()
+
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.lr = 5e-4
         self.gamma = 0.7
@@ -212,7 +217,9 @@ class DQNAgent(ArkAgent):
         )
         self.training_steps_done += 1
 
+        action: int
         if sample > eps_threshold:
+            self.policy_net.eval()
             with torch.no_grad():
                 # t.max(1) will return the largest column value of each row.
                 # second column on max result is index of where max element was
@@ -220,27 +227,20 @@ class DQNAgent(ArkAgent):
                 q_values = self.policy_net(screen.unsqueeze(0), info.unsqueeze(0))
                 action = q_values.argmax(1).item()
                 self.actions[self.env.episode][action] += 1
-                return action
-            # max_q_value = torch.tensor(
-            #    [q_values.argmax(1).item()], device=self.device, dtype=torch.long
-            # )
-            # return max_q_value.item()
+            if self.is_training:
+                self.policy_net.train()
         else:
             action = self.env.action_space.sample(
                 mask=np.array([1, 1, 1, 1], dtype=np.int8)
             )
             self.actions[self.env.episode][action] += 1
-            return action
-            # return torch.tensor(
-            #    self.env.action_space.sample(
-            #        mask=np.array([1, 1, 1, 1], dtype=np.int8)
-            #    ),
-            #    device=self.device,
-            #    dtype=torch.long,
-            # ).item()
+        return action
 
     ##@profile
     def optimize_model(self):
+        if not self.is_training:
+            return
+
         if not self.memory.can_sample():
             return
 
@@ -304,6 +304,7 @@ class DQNAgent(ArkAgent):
         with torch.no_grad():
             vals = self.target_net(non_final_next_screens, non_final_next_infos)
             next_state_values[non_final_mask] = vals.max(1).values
+
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * self.gamma) + reward_batch
 
