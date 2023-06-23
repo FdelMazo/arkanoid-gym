@@ -54,3 +54,6 @@ You can select how many episodes to train the `DQN` agent with using `--episodes
 `--checkpoint-dir` is the directory where the learned weights will be saved after training for usage when playing.
 `--save-every` is used to saved intermediate checkpoints every some amount of frames.
 `--resume` will fetch the latest weights from `checkpoint-dir` and resume training from there. `--no-resume` is the default, which will train the model from scratch.
+
+# Notebooks
+- `DQN-tests.ipynb` replicates the training loop used in the code from the DQN Agent to explore training later.
