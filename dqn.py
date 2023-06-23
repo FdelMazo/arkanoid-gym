@@ -169,12 +169,12 @@ class DQNAgent(ArkAgent):
             self.target_net.eval()
 
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.lr = 5e-4
-        self.gamma = 0.6
+        self.lr = 1e-3
+        self.gamma = 0.3
         self.tau = 1e-2
         self.eps_start = 0.95
         self.eps_end = 0.1
-        self.eps_decay = 100
+        self.eps_decay = 2000
         self.optimizer = torch.optim.AdamW(
             self.policy_net.parameters(), lr=self.lr, amsgrad=True
         )
