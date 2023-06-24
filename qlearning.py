@@ -8,7 +8,7 @@ import numpy as np
 
 def state(info):
     state = [
-        info["vaus"]["vaus_middle"],
+        info["vaus"]["vaus_middle_grid"],
         info["ball"]["ball_side"],
     ]
     return str(state)
